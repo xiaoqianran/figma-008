@@ -4,6 +4,9 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  // Important for GitHub Pages deployment (https://<user>.github.io/figma-008/)
+  base: '/figma-008/',
+
   plugins: [
     react({
       // React 19 Compiler support (auto-memoization)
