@@ -1,0 +1,392 @@
+@import "tailwindcss";
+
+/* ============================================
+   CARGO Figma Replica - Design Tokens (2026)
+   Matched to the official Figma Components Overview
+   iOS / SF Pro aesthetic + modern web
+   ============================================ */
+
+:root {
+  /* === EXACT TOKENS FROM Figma CARGO spec (extracted 2026-05-30 via MCP) === */
+  /* Primary brand (most important CTA, accents, logo, Twitter social) */
+  --color-primary: #41d5fb;
+  --color-primary-dark: #2bb8e0;
+  --color-accent: #41d5fb;        /* Matches Figma usage */
+
+  /* Text & headings (SF UI Display dominant) */
+  --color-text-primary: #222b45;
+  --color-text-secondary: #6C6C6E;
+  --color-text-tertiary: #8f9bb3;   /* Exact placeholder/secondary from spec */
+  --color-text-muted: #acb1c0;
+
+  /* Backgrounds & Surfaces (exact) */
+  --color-bg: #F8F9FA;
+  --color-surface: #FFFFFF;
+  --color-surface-elevated: #FFFFFF;
+  --color-input-bg: #f7f9fc;        /* Filled input variant */
+
+  /* Borders / Dividers (exact from spec) */
+  --color-separator: #E5E5EA;
+  --color-border: #e4e9f2;          /* Input border exact */
+  --color-border-subtle: #979797;
+
+  /* Success / Warning / Social (exact) */
+  --color-success: #34C759;
+  --color-danger: #FF3B30;
+  --color-fb: #3b5a99;              /* Facebook button */
+  --color-twitter: #41d5fb;         /* Twitter uses primary accent */
+
+  /* iOS System kit (status, home indicator, keys) preserved */
+  --color-ios-black: #000000;
+  --color-ios-gray: #979797;
+  
+  /* Dark mode foundations (for future or contrast) */
+  --color-bg-dark: #0F172A;
+  --color-surface-dark: #1E293B;
+  
+  /* Figma-specific component tokens */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+  
+  /* iOS button heights from Figma */
+  --btn-height-sm: 32px;
+  --btn-height-md: 44px;   /* Primary tap target */
+  --btn-height-lg: 60px;
+  
+  /* Spacing (8px grid + Figma values) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  
+  /* Typography - SF Pro approximation (best on Apple, good elsewhere) */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-display: "SF Pro Display", -apple-system, system-ui, sans-serif;
+  
+  /* Shadows (subtle iOS style) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
+  
+  /* Safe area for device frame / PWA */
+  --safe-top: env(safe-area-inset-top, 20px);
+  --safe-bottom: env(safe-area-inset-bottom, 20px);
+}
+
+/* Base resets for mobile-first Figma fidelity */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: #111113; /* Dark neutral for device preview context */
+  color: var(--color-text-primary);
+  overscroll-behavior: none;
+}
+
+/* iOS-style text selection and inputs */
+input, textarea, button, select {
+  font-family: inherit;
+}
+
+input:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   CARGO Component Primitives — EXACT Figma spec (2026-05-30)
+   12px radius primary, 44/60px heights, 343px content, #41d5fb primary
+   ============================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: 12px;                 /* Exact from spec: 12px primary */
+  transition: transform 0.1s ease, background-color 0.1s ease, opacity 0.1s ease;
+  user-select: none;
+  cursor: pointer;
+  border: none;
+  white-space: nowrap;
+}
+
+.btn:active {
+  transform: scale(0.985);
+}
+
+/* Primary CTA — #41d5fb fill, 18px Bold white text (Splash/SignUp) */
+.btn-primary {
+  background: var(--color-primary);
+  color: #ffffff;
+  height: 44px;                        /* Most common primary height */
+  padding: 0 24px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.btn-primary:disabled {
+  background: #c5e9f7;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+/* Large warning/primary variant (60px) used on several CTAs */
+.btn-primary-lg {
+  background: var(--color-primary);
+  color: #ffffff;
+  height: 60px;
+  padding: 0 24px;
+  font-size: 18px;
+  font-weight: 700;
+  border-radius: 15px;                 /* Slightly larger radius on big CTAs */
+}
+
+/* Secondary / outline */
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  height: 44px;
+  padding: 0 24px;
+}
+
+/* Social buttons — exact colors from spec */
+.btn-social {
+  height: 44px;
+  background: var(--color-fb);
+  color: white;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.btn-social.twitter {
+  background: var(--color-twitter);
+}
+
+/* Warning / secondary actions (used in Figma for some CTAs) */
+.btn-warning {
+  background: #f7c948;
+  color: #222b45;
+  height: 44px;
+  border-radius: 12px;
+}
+
+/* Form inputs — EXACT Figma (48px, 12px radius, #e4e9f2 border, #f7f9fc filled variant) */
+.input {
+  width: 100%;
+  height: 48px;
+  padding: 0 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);   /* #e4e9f2 */
+  border-radius: 12px;
+  font-size: 15px;
+  color: var(--color-text-primary);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(65, 213, 251, 0.18);
+  background: var(--color-surface);
+}
+
+.input--filled {
+  background: var(--color-input-bg);       /* #f7f9fc */
+  border-color: var(--color-border);
+}
+
+.input::placeholder {
+  color: #8f9bb3;                          /* Exact from spec */
+}
+
+/* Cards & Surfaces */
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+/* Bottom navigation / tab bars */
+.tab-bar {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--color-separator);
+}
+
+/* Status bar simulation inside device frame */
+.status-bar {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #000;
+  background: transparent;
+}
+
+/* Ride / Service selection cards (Figma) */
+.ride-card {
+  transition: all 0.2s cubic-bezier(0.23, 1.0, 0.32, 1);
+}
+
+.ride-card.selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(10, 124, 255, 0.2);
+}
+
+/* Map container overrides for clean mobile */
+.map-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #E8E8E8;
+}
+
+.map-container .maplibregl-ctrl {
+  /* Hide default controls or restyle for Figma fidelity */
+}
+
+/* Screen transition container for Framer Motion */
+.screen {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+/* Device preview frame (the "Figma viewer" experience) */
+.device-frame {
+  width: 375px;
+  height: 812px;
+  background: #111;
+  border-radius: 60px;
+  padding: 12px;
+  box-shadow: 
+    0 0 0 12px #222,
+    0 40px 120px -20px rgba(0,0,0,0.6),
+    inset 0 0 0 1px rgba(255,255,255,0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.device-frame::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+  height: 32px;
+  background: #111;
+  border-radius: 0 0 20px 20px;
+  z-index: 50;
+}
+
+/* Home indicator */
+.device-frame::after {
+  content: '';
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 134px;
+  height: 5px;
+  background: #333;
+  border-radius: 100px;
+  z-index: 50;
+}
+
+/* Make content inside device scrollable like phone */
+.app-viewport {
+  width: 100%;
+  height: 100%;
+  background: var(--color-bg);
+  overflow: hidden;
+  position: relative;
+  border-radius: 48px;
+}
+
+/* Utility for full-bleed map or hero */
+.full-bleed {
+  margin: 0 calc(-1 * var(--space-4));
+}
+
+/* Keyboard avoidance helper */
+.keyboard-aware {
+  transition: padding-bottom 0.2s ease;
+}
+
+/* Toast customization to feel native */
+.sonner-toast {
+  border-radius: var(--radius-lg) !important;
+  font-family: var(--font-sans) !important;
+}
+
+/* ============================================
+   Interactive Map (MapLibre) polish for CARGO
+   Matches Figma screen 11 fidelity + iOS ride-hailing UX
+   ============================================ */
+.map-container .maplibregl-canvas {
+  outline: none;
+}
+
+.map-container .maplibregl-ctrl-bottom-right {
+  bottom: 88px !important; /* lift above floating panel */
+  right: 10px !important;
+}
+
+/* Hide default MapLibre attribution (we render a custom one) */
+.map-container .maplibregl-ctrl-attrib {
+  display: none !important;
+}
+
+/* Clean quick chips horizontal scroll */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Improve marker hit areas on mobile */
+.cargo-dest-pin svg,
+.cargo-user-loc {
+  touch-action: none;
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .btn, .input, .ride-card {
+    transition: none !important;
+  }
+}
+
+/* Print / export friendly (future) */
+@media print {
+  .device-frame { box-shadow: none; border-radius: 0; }
+}
