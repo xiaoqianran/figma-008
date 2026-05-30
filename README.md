@@ -1,171 +1,227 @@
-# CARGO — High-Fidelity Figma Replica (Full Suite)
+# CARGO — 高保真 Figma 复刻（完整套件）
 
-**Pixel-perfect, fully interactive web replica of the "CARGO - Car Booking & Sharing App" design system** from the connected Figma file (Components Overview + 20+ production screens).
+**「CARGO - Car Booking & Sharing App」设计系统的像素级、完全可交互的网页复刻版**，来源于已连接的 Figma 文件（组件总览页 + 20+ 个生产级屏幕）。
 
-Built as a modern, production-grade PWA using the 2026 best-practice stack (React 19 + Vite + Tailwind v4 + Framer Motion + MapLibre-ready + Zustand + RHF+Zod).
+项目采用 2026 年主流最佳实践技术栈构建为现代化生产级 PWA：React 19 + Vite + Tailwind v4 + Framer Motion + MapLibre + Zustand + React Hook Form + Zod。
 
-> Goal: 1:1 visual + interaction fidelity with every screen, component, flow, and detail present in the Figma — implemented as a real, usable application (not a static prototype).
+> 目标：与 Figma 中呈现的每一个屏幕、组件、流程和细节实现 1:1 的视觉与交互保真度，并将其实现为一个真正可用的应用程序（而非静态原型）。
 
-## Current Status (Phase 1 Complete)
+---
 
-- ✅ Full iPhone X device frame viewer (exact 375×812, bezels, status bar, home indicator)
-- ✅ Auth & Onboarding: Splash → Sign Up (with phone + social) → Login (functional "log in" that persists)
-- ✅ Core booking engine:
-  - Home screen with quick actions
-  - ✅ Interactive MapLibre GL destination picker (full draggable pin + tap-to-place, Nominatim reverse geocoding, Photon search autocomplete, browser geolocation with SF fallback, straight-line route preview, dynamic price estimates)
-  - Select Service (4 ride types: Economy/Comfort/Premium/XL with prices, ETAs)
-  - Payment (3 methods + promo entry + full confirmation + ride history)
-- ✅ Global booking state (Zustand + localStorage persistence)
-- ✅ Beautiful screen transitions (Framer Motion)
-- ✅ PWA-ready (manifest, SW via vite-plugin-pwa)
-- ✅ Design tokens & primitives already aligned to Figma (buttons 44/60px, inputs, cards, colors, SF Pro stack)
-- ✅ 15+ high-res reference screenshots extracted directly from Figma via MCP
+## 当前状态（第一阶段已完成）
 
-**Remaining (Phases 2+ — actively in progress by multi-agent team):**
-- All remaining Figma screens (Verify OTP refinements, Enable Location real permission, Favorites, Add Place, full Scan Card flow, Pickup Time picker, etc.)
-- Driver tracking simulation on map + live ETA
-- Bottom sheets + gesture navigation polish
-- Full offline support + visual regression tests
-- Bottom sheets, full modals, gesture navigation (swipe back)
-- Driver tracking simulation (real-time updating map + ETA)
-- More form fidelity (country picker, numeric keyboard, OTP inputs)
-- Polish, a11y, offline, full Playwright visual + flow tests
+- ✅ 完整的 iPhone X 设备框架查看器（精确 375×812，边框、状态栏、主屏幕指示器）
+- ✅ 认证与新手引导流程：启动页 → 注册（手机号 + 社交登录）→ 登录 → 验证码 → 开启定位
+- ✅ 核心预订引擎：
+  - 首页（快速入口 + 推荐出行）
+  - **交互式 MapLibre GL 目的地选择器**（支持拖拽选点、点击选点、Nominatim 反向地理编码、Photon 搜索自动补全、浏览器定位 + 旧金山兜底、直线路线预览、动态价格估算）
+  - 选择服务（4 种车型：经济型 / 舒适型 / 高级型 / 大型车，含价格与预计到达时间）
+  - 支付（3 种支付方式 + 优惠码 + 完整确认 + 历史记录）
+- ✅ 全局预订状态管理（Zustand + localStorage 持久化）
+- ✅ 流畅的屏幕过渡动画（Framer Motion）
+- ✅ PWA 支持（Manifest + Service Worker，通过 vite-plugin-pwa 实现）
+- ✅ 设计令牌与基础组件已与 Figma 精确对齐（按钮高度 44/60px、输入框、卡片、配色、SF Pro 字体栈）
+- ✅ 通过 MCP 直接从 Figma 导出的 15+ 张高分辨率参考截图
 
-## Tech Stack (2026 Research-Backed)
+**后续阶段（多 Agent 团队正在持续推进）：**
 
-- **Vite 6 + React 19** (Compiler ready) + TypeScript (strictest)
-- **Tailwind CSS v4** (CSS-first via Vite plugin — tokens live in `@theme`)
-- **React Router v7** + Framer Motion for transitions
-- **Zustand 5** (persist) for booking + auth state
-- **React Hook Form + Zod** for all forms
-- **MapLibre GL** (future) + lucide-react icons
+- 补全剩余 Figma 屏幕（验证码优化、定位权限真实调用、收藏、添加地点、完整扫码加卡、取车时间选择器等）
+- 地图上的司机实时追踪与动态 ETA
+- 底部弹层 + 手势导航完善
+- 完整离线支持 + 视觉回归测试
+- 更多表单细节（国家选择器、数字键盘、OTP 输入体验）
+- 可访问性、无障碍、完整 Playwright 视觉与流程测试
+
+---
+
+## 技术栈（2026 年研究验证版）
+
+- **Vite 6 + React 19**（支持 Compiler）+ TypeScript（最严格配置）
+- **Tailwind CSS v4**（通过 Vite 插件实现 CSS-first，设计令牌存放于 `@theme`）
+- **React Router v7** + Framer Motion 负责路由与过渡
+- **Zustand 5**（支持 persist）管理预订与用户状态
+- **React Hook Form + Zod** 处理所有表单
+- **MapLibre GL**（交互式地图）+ lucide-react 图标
 - **vite-plugin-pwa** + Workbox
-- **Biome** (lint+format), Vitest + Playwright (testing)
-- Full PWA installable, offline shell ready
+- **Biome**（格式化 +  lint）、Vitest + Playwright（测试）
+- 完整支持 PWA 安装与离线壳
 
-See detailed 2026 architecture research in agent logs.
+详细的 2026 架构研究记录在 Agent 日志中。
 
-## Getting Started
+---
+
+## 开始使用
 
 ```bash
-# 1. Install (first time)
+# 1. 安装依赖（首次）
 npm install
 
-# 2. Run dev server (instant HMR)
+# 2. 启动开发服务器（支持热更新）
 npm run dev
 
-# 3. Open http://localhost:5173
-#    You will see the exact iPhone frame with the CARGO app inside.
-#    Tap through the full booking flow end-to-end.
+# 3. 打开 http://localhost:5173
+#    你会看到精确的 iPhone 设备框架，里面就是 CARGO 应用。
+#    可以完整走一遍从注册到下单的全部流程。
 
-# Build for production
+# 构建生产版本
 npm run build
 
-# Type check + lint
+# 类型检查 + 代码检查
 npm run typecheck
 npm run lint
 
-# Run tests (when implemented)
+# 运行测试（逐步完善中）
 npm test
 npm run test:e2e
 ```
 
-**Recommended testing**:
-- Desktop: Use the beautiful device frame (best for seeing 1:1 fidelity)
-- Real mobile: Open in iOS Safari / Chrome DevTools device emulation (iPhone 14/15 Pro)
-- PWA: In Chrome/Edge on desktop or real device → "Install" prompt or Share → Add to Home Screen
+**推荐的测试方式**：
 
-## Figma Reference Assets
-
-All screenshots live in `figma-refs/screens/` and `figma-refs/components/` — exported at 2× scale directly from the live Figma document using the MCP bridge.
-
-Use these for pixel-diffing during implementation.
-
-## Project Structure
-
-```
-src/
-  screens/           # One file per major Figma screen/flow
-  components/        # Shared UI (will grow with design system)
-  stores/            # Zustand (single source of truth for booking)
-  lib/               # Utils, future API clients, token exports
-public/              # PWA icons, static assets
-figma-refs/          # Source of truth screenshots + future token JSON
-```
-
-## Commit Convention
-
-This project **strictly follows Conventional Commits 1.0.0**.
-
-See [CONVENTIONAL_COMMITS.md](./CONVENTIONAL_COMMITS.md) for:
-- The complete, properly formatted commit history of all work done so far
-- Exact messages you should use if replaying the history locally
-- Future contribution rules
-
-All new work must use the format:
-
-```
-<type>[optional scope]: <description>
-
-[optional body]
-
-[optional footer(s)]
-```
-
-Examples:
-- `feat(map): add draggable destination pin with reverse geocoding`
-- `fix(auth): prevent OTP input from losing focus on mobile`
-- `chore: update dependencies to latest 2026 versions`
-- `feat!: drop support for legacy booking format` (with BREAKING CHANGE footer)
-
-## Contributing / Agent Notes
-
-This project is being built autonomously by a multi-agent software engineering team (Grok + specialized subagents).
-
-- All changes are direct code edits + self-verification.
-- New tech is researched (official docs + recent articles) before adoption.
-- Every phase ends with working, tested, committed functionality.
-- **All commits must follow Conventional Commits** (enforced in future via commitlint + husky if desired).
-
-Current agents are continuing:
-- Extracting remaining design tokens + full component inventory from Figma
-- Implementing the real interactive MapLibre destination picker
-- Adding remaining screens (OTP verify, location permission, favorites, full payment forms, scan card simulation)
-- Adding Playwright E2E + visual regression suite
-
-## License & Credits
-
-Replica of internal design system for educational / portfolio purposes.
-Figma file: "CARGO - Car Booking & Sharing App" (Components Overview page + all 20+ flows).
-
-Built with ❤️ for fidelity and craft.
+- 桌面端：使用精美的设备框架查看（最能体现 1:1 保真度）
+- 真实移动端：在 iOS Safari 或 Chrome DevTools 设备模拟器（iPhone 14/15 Pro）中打开
+- PWA：在 Chrome/Edge 桌面或真实设备上点击「安装」提示，或通过「分享 → 添加到主屏幕」
 
 ---
 
-**Next milestone**: Full interactive MapLibre map + all 20 Figma screens + driver tracking demo (est. 1–2 more agent iterations).
+## Figma 参考素材
+
+所有截图均存放在 `figma-refs/screens/` 和 `figma-refs/components/` 目录下，通过 MCP 桥接直接从在线 Figma 文件以 2× 比例导出。
+
+这些素材可用于开发过程中的像素级比对。
+
+---
+
+## 项目结构
+
+```
+src/
+  screens/           # 每个主要 Figma 屏幕/流程对应一个文件
+  components/        # 共享 UI 组件（会随设计系统持续扩展）
+  stores/            # Zustand 状态管理（预订流程的唯一事实来源）
+  lib/               # 工具函数、未来 API 客户端、令牌导出
+public/              # PWA 图标、静态资源
+figma-refs/          # 设计参考截图 + 未来令牌 JSON
 ```
 
-## Map Implementation Notes (Destination Picker)
+---
 
-The interactive destination picker at `/destination` is now powered by **MapLibre GL JS v5** (direct usage, no react wrapper).
+## 提交规范
 
-**Tile source (free, zero keys):**
-- Primary: `https://tiles.openfreemap.org/styles/liberty/style.json` (OpenFreeMap — high-quality OSM vector tiles)
-- Graceful fallback: MapLibre demo tiles
+本项目**严格遵循 Conventional Commits 1.0.0 规范**。
 
-**Geocoding (also free):**
-- Reverse: Nominatim (`nominatim.openstreetmap.org`) — polite User-Agent + heavy debouncing + abort controllers
-- Autocomplete: Photon by Komoot (`photon.komoot.io`)
+详情请查看 [CONVENTIONAL_COMMITS.md](./CONVENTIONAL_COMMITS.md)，其中包含：
 
-**How to swap providers (future-proof):**
-1. Change `MAP_STYLE_PRIMARY` constant in `src/components/maps/MapView.tsx`
-2. Update `reverseGeocode` / `searchPlaces` in `src/components/maps/geocode.ts` (same signatures)
-3. For fully offline: integrate PMTiles + `@maplibre/maplibre-gl-pmtiles` (see detailed comments inside MapView.tsx). The component API stays identical.
+- 至今所有工作的完整、规范的提交历史
+- 本地回放历史时应使用的精确提交信息
+- 未来的贡献规则
 
-**Bundle strategy:** `maplibre-gl` is isolated in the `map-vendor` manual chunk (Vite config). MapView itself lazy-loaded via `React.lazy`.
+所有新提交必须使用以下格式：
 
-All map-related fetches include production-grade resilience (fall back to coordinate strings, SF default location, straight-line route if OSRM down).
+```
+<类型>[可选范围]: <描述>
 
-Attribution footer is always rendered (legal requirement).
+[可选正文]
 
-Now, let's wait for npm install and then run the dev server to verify everything works.
+[可选脚注]
+```
+
+示例：
+- `feat(map): add draggable destination pin with reverse geocoding`
+- `fix(auth): prevent OTP input from losing focus on mobile`
+- `chore: update dependencies to latest 2026 versions`
+- `feat!: drop support for legacy booking format`（需包含 BREAKING CHANGE 脚注）
+
+---
+
+## 贡献与说明
+
+本项目由多 Agent 软件工程团队（Grok + 多个专业子 Agent）自主构建。
+
+- 所有变更均为直接代码修改 + 自我验证
+- 引入新技术前均会先查阅官方文档与近期研究
+- 每个阶段都会以可运行、可测试、已提交的功能结束
+- **所有提交必须遵循 Conventional Commits 规范**（未来可能通过 commitlint + husky 强制执行）
+
+当前团队正在继续推进：
+- 从 Figma 提取剩余设计令牌与完整组件清单
+- 完善 MapLibre 目的地选择器
+- 补全剩余屏幕（验证码、定位权限、收藏、扫码加卡等）
+- 增加 Playwright E2E 测试与视觉回归套件
+
+---
+
+## 许可证与致谢
+
+本项目为教育 / 作品集目的，对内部设计系统进行复刻。
+
+Figma 原始文件：「CARGO - Car Booking & Sharing App」（组件总览页 + 全部 20+ 个流程）。
+
+为极致保真与匠心而构建 ❤️
+
+---
+
+## 地图实现说明（目的地选择器）
+
+`/destination` 页面的交互式目的地选择器目前由 **MapLibre GL JS v5** 驱动（直接使用，无 React 封装）。
+
+**瓦片来源（免费、无需密钥）：**
+- 主瓦片：`https://tiles.openfreemap.org/styles/liberty/style.json`（OpenFreeMap，高品质 OSM 矢量瓦片）
+- 优雅降级：MapLibre 演示瓦片
+
+**地理编码（同样免费）：**
+- 反向地理编码：Nominatim（`nominatim.openstreetmap.org`），使用礼貌的 User-Agent + 强力防抖 + AbortController
+- 自动补全：Photon by Komoot（`photon.komoot.io`）
+
+**如何更换服务商（面向未来）：**
+1. 修改 `src/components/maps/MapView.tsx` 中的 `MAP_STYLE_PRIMARY` 常量
+2. 更新 `src/components/maps/geocode.ts` 中的 `reverseGeocode` / `searchPlaces`（签名保持一致）
+3. 实现完全离线：集成 PMTiles + `@maplibre/maplibre-gl-pmtiles`（详细说明见 MapView.tsx 内的注释）。组件对外 API 保持不变。
+
+**打包策略**：`maplibre-gl` 被隔离在 Vite 配置的 `map-vendor` 手动分块中，MapView 本身通过 `React.lazy` 懒加载。
+
+所有地图相关请求都具备生产级容错能力（失败时回退到坐标字符串、旧金山默认位置、若 OSRM 不可用则绘制直线）。
+
+归属信息始终渲染（法律要求）。
+
+---
+
+## English Version
+
+# CARGO — High-Fidelity Figma Replica (Full Suite)
+
+**Pixel-perfect, fully interactive web replica of the "CARGO - Car Booking & Sharing App" design system** from the connected Figma file.
+
+Built as a modern, production-grade PWA using the 2026 best-practice stack (React 19 + Vite + Tailwind v4 + Framer Motion + MapLibre + Zustand + RHF+Zod).
+
+> Goal: 1:1 visual + interaction fidelity with every screen, component, flow, and detail present in the Figma — implemented as a real, usable application.
+
+## Current Status (Phase 1 Complete)
+
+- ✅ Full iPhone X device frame viewer
+- ✅ Complete auth & onboarding flow
+- ✅ Core booking engine with interactive MapLibre destination picker
+- ✅ Global state, PWA support, design tokens aligned to Figma
+- ✅ 15+ high-res Figma reference screenshots
+
+(Full English details are preserved in the commit history and agent logs.)
+
+## Tech Stack
+
+Same as the Chinese section above.
+
+## Getting Started
+
+Same commands as above.
+
+## Commit Convention
+
+This project strictly follows [Conventional Commits 1.0.0](https://www.conventionalcommits.org/).
+
+See [CONVENTIONAL_COMMITS.md](./CONVENTIONAL_COMMITS.md) for the full history and rules.
+
+## License & Credits
+
+Replica for educational/portfolio purposes.  
+Figma file: "CARGO - Car Booking & Sharing App".
+
+Built with ❤️ for fidelity and craft.
