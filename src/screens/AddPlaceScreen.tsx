@@ -2,21 +2,24 @@ import { MapPin } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useAppStore } from '../stores/useAppStore';
 
 /**
  * Figma screen 13: Add new place
  * Form + map teaser, exact input heights and 12px radius from spec.
+ * Now fully persists to Zustand store (favorites) for cross-tab use in Favorites tab.
  */
 export function AddPlaceScreen() {
   const navigate = useNavigate();
+  const { addFavorite } = useAppStore();
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
 
   const handleSave = () => {
     if (!name || !address) return;
-    // In real app this would persist to a places store
-    toast.success(`Saved "${name}"`, {
-      description: 'Added to your Favorites',
+    addFavorite({ name: name.trim(), address: address.trim() });
+    toast.success(`Saved "${name.trim()}"`, {
+      description: 'Added to your Favorites · Available for quick booking',
     });
     navigate('/favorites');
   };

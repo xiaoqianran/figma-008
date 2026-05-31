@@ -1,0 +1,357 @@
+diff --git a/src/App.tsx b/src/App.tsx
+index 0a851c4..0c022cc 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -171,10 +171,17 @@ export default function App() {
+         <Route
+           path="/destination"
+           element={
+-            <div className="screen bg-white">
++            <motion.div
++              key="destination"
++              initial={{ opacity: 0, y: 20 }}
++              animate={{ opacity: 1, y: 0 }}
++              exit={{ opacity: 0, y: -20 }}
++              transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
++              className="screen bg-white"
++            >
+               <DestinationScreen />
+               <MainTabBar />
+-            </div>
++            </motion.div>
+           }
+         />
+ 
+diff --git a/src/screens/ActivityScreen.tsx b/src/screens/ActivityScreen.tsx
+index 79adf3f..465eb0c 100644
+--- a/src/screens/ActivityScreen.tsx
++++ b/src/screens/ActivityScreen.tsx
+@@ -1,19 +1,43 @@
+-import { Clock, Star } from 'lucide-react';
++import { Clock, Repeat, Star } from 'lucide-react';
++import { useNavigate } from 'react-router-dom';
++import { toast } from 'sonner';
+ import { useAppStore } from '../stores/useAppStore';
+ 
+ /**
+  * Activity / Ride History screen
+- * Now fully functional — pulls from Zustand rideHistory.
+- * Matches the spirit of Figma history cards (screen 16 had promo history style).
++ * Fully store-connected with "Book again" quick action.
++ * Sets booking state from history and jumps to service selection for instant rebooking.
++ * Tab bar always present. Great cross-tab flow completion.
+  */
+ export function ActivityScreen() {
+-  const { rideHistory } = useAppStore();
++  const navigate = useNavigate();
++  const { rideHistory, updateBooking } = useAppStore();
++
++  const handleBookAgain = (ride: (typeof rideHistory)[0]) => {
++    updateBooking({
++      pickupLocation: ride.from,
++      destinationLocation: ride.to,
++      pickupCoords: ride.fromCoords,
++      destinationCoords: ride.toCoords,
++      estimatedPrice: ride.price,
++      rideType: null,
++      promoCode: null,
++    });
++    toast.success('Ride details loaded', {
++      description: `Ready to book ${ride.from} → ${ride.to} again`,
++    });
++    // Jump to /service (service selection) for a fast rebook experience.
++    // Booking state is pre-populated from history; tab bar hidden during flow as designed.
++    navigate('/service');
++  };
+ 
+   return (
+     <div className="screen overflow-y-auto bg-[#F8F9FA] pb-20 text-black">
+       <div className="px-4 pt-5">
+         <div className="text-2xl font-semibold tracking-[-0.5px]">Activity</div>
+-        <div className="text-[#6C6C6E] text-sm mt-1">Your recent rides</div>
++        <div className="text-[#6C6C6E] text-sm mt-1">
++          Your recent rides · {rideHistory.length} total
++        </div>
+       </div>
+ 
+       {rideHistory.length === 0 ? (
+@@ -23,6 +47,12 @@ export function ActivityScreen() {
+           <p className="text-sm text-[#6C6C6E] mt-2 max-w-[260px]">
+             Complete your first booking and it will appear here. All rides are saved locally.
+           </p>
++          <button
++            onClick={() => navigate('/home')}
++            className="mt-6 text-sm px-5 py-2.5 rounded-2xl bg-white border border-[#E5E5EA] active:bg-zinc-50 font-medium text-[#0A7CFF]"
++          >
++            Start your first ride
++          </button>
+         </div>
+       ) : (
+         <div className="mt-4 space-y-3 px-3">
+@@ -46,6 +76,16 @@ export function ActivityScreen() {
+                   <Star size={13} fill="currentColor" /> {ride.rating} • {ride.driver}
+                 </div>
+               </div>
++
++              {/* "Book again" quick action — the key missing flow for delightful Activity tab */}
++              <div className="mt-3 pt-3 border-t border-[#E5E5EA]">
++                <button
++                  onClick={() => handleBookAgain(ride)}
++                  className="w-full flex items-center justify-center gap-2 text-[#0A7CFF] active:bg-[#0A7CFF]/5 active:scale-[0.985] text-sm font-semibold py-2 rounded-xl border border-[#0A7CFF]/20 transition-all"
++                >
++                  <Repeat size={15} /> Book again
++                </button>
++              </div>
+             </div>
+           ))}
+         </div>
+diff --git a/src/screens/AddPlaceScreen.tsx b/src/screens/AddPlaceScreen.tsx
+index 192f7e5..fa04b0d 100644
+--- a/src/screens/AddPlaceScreen.tsx
++++ b/src/screens/AddPlaceScreen.tsx
+@@ -2,21 +2,24 @@ import { MapPin } from 'lucide-react';
+ import { useState } from 'react';
+ import { useNavigate } from 'react-router-dom';
+ import { toast } from 'sonner';
++import { useAppStore } from '../stores/useAppStore';
+ 
+ /**
+  * Figma screen 13: Add new place
+  * Form + map teaser, exact input heights and 12px radius from spec.
++ * Now fully persists to Zustand store (favorites) for cross-tab use in Favorites tab.
+  */
+ export function AddPlaceScreen() {
+   const navigate = useNavigate();
++  const { addFavorite } = useAppStore();
+   const [name, setName] = useState('');
+   const [address, setAddress] = useState('');
+ 
+   const handleSave = () => {
+     if (!name || !address) return;
+-    // In real app this would persist to a places store
+-    toast.success(`Saved "${name}"`, {
+-      description: 'Added to your Favorites',
++    addFavorite({ name: name.trim(), address: address.trim() });
++    toast.success(`Saved "${name.trim()}"`, {
++      description: 'Added to your Favorites · Available for quick booking',
+     });
+     navigate('/favorites');
+   };
+diff --git a/src/screens/FavoritesScreen.tsx b/src/screens/FavoritesScreen.tsx
+index a3251ad..72e41f1 100644
+--- a/src/screens/FavoritesScreen.tsx
++++ b/src/screens/FavoritesScreen.tsx
+@@ -1,26 +1,58 @@
+-import { Heart, MapPin, Plus } from 'lucide-react';
++import { MapPin, Plus, Trash2 } from 'lucide-react';
+ import { useNavigate } from 'react-router-dom';
++import { toast } from 'sonner';
++import { useAppStore } from '../stores/useAppStore';
+ 
+ /**
+  * Figma screen 12: My favorites
+- * Clean list of saved places + "Add new place" entry point.
+- * Uses exact spacing/radius from spec (16px padding, 12px cards).
++ * Now fully store-backed for persistence. Tapping a place quickly books to it
++ * (sets destination in booking store and jumps to service selection).
++ * Add/remove fully functional + delightful empty state + quick actions.
++ * Tab bar always visible. No edits to core map booking flow.
+  */
+-const FAVORITES = [
+-  { id: 1, name: 'Home', address: '874 Hildegard Crossing', icon: '🏠' },
+-  { id: 2, name: 'Work', address: '27 Sawayn Square', icon: '🏢' },
+-  { id: 3, name: 'Gym', address: 'Mission Bay', icon: '💪' },
+-];
++function getPlaceIcon(name: string): string {
++  const n = name.toLowerCase();
++  if (n.includes('home') || n.includes('house')) return '🏠';
++  if (n.includes('work') || n.includes('office')) return '🏢';
++  if (n.includes('gym') || n.includes('fitness')) return '💪';
++  if (n.includes('airport') || n.includes('plane')) return '✈️';
++  if (n.includes('school') || n.includes('uni')) return '🎓';
++  if (n.includes('park')) return '🌳';
++  if (n.includes('cafe') || n.includes('coffee')) return '☕';
++  return '📍';
++}
+ 
+ export function FavoritesScreen() {
+   const navigate = useNavigate();
++  const { favorites, updateBooking, removeFavorite } = useAppStore();
++
++  const handleBookFromFavorite = (place: { name: string; address: string; coords?: { lat: number; lng: number } }) => {
++    updateBooking({
++      destinationLocation: place.address,
++      destinationCoords: place.coords,
++    });
++    toast.success(`Booking to ${place.name}`, {
++      description: place.address,
++    });
++    // Quick re-use: jump directly to service selection (destination already set in store)
++    // This provides delightful one-tap booking from the Favorites tab without touching map UI.
++    navigate('/service');
++  };
++
++  const handleRemove = (id: string, name: string, e: React.MouseEvent) => {
++    e.stopPropagation();
++    removeFavorite(id);
++    toast.info(`Removed "${name}"`, { description: 'Place removed from favorites' });
++  };
+ 
+   return (
+     <div className="screen overflow-y-auto bg-[#F8F9FA] pb-20 text-[#222b45]">
+       <div className="px-4 pt-5 flex items-center justify-between">
+         <div>
+           <div className="text-2xl font-semibold tracking-[-0.5px]">My favorites</div>
+-          <div className="text-[#8f9bb3] text-sm mt-0.5">Saved places for quick booking</div>
++          <div className="text-[#8f9bb3] text-sm mt-0.5">
++            {favorites.length} saved place{favorites.length === 1 ? '' : 's'} · Quick booking
++          </div>
+         </div>
+         <button
+           onClick={() => navigate('/add-place')}
+@@ -30,40 +62,67 @@ export function FavoritesScreen() {
+         </button>
+       </div>
+ 
+-      <div className="mt-4 px-3 space-y-2">
+-        {FAVORITES.map((place) => (
+-          <div
+-            key={place.id}
+-            onClick={() => {
+-              // Simulate selecting favorite → go to destination with prefilled value
+-              navigate('/destination', { state: { prefill: place.address } });
+-            }}
+-            className="card flex items-center gap-4 p-4 active:bg-white border border-[#e4e9f2] rounded-[12px] cursor-pointer"
+-          >
+-            <div className="text-3xl w-10">{place.icon}</div>
+-            <div className="flex-1 min-w-0">
+-              <div className="font-semibold text-[15px]">{place.name}</div>
+-              <div className="text-[#8f9bb3] text-sm flex items-center gap-1 mt-0.5">
+-                <MapPin size={13} /> {place.address}
+-              </div>
+-            </div>
+-            <Heart size={18} className="text-[#41d5fb]" />
++      {favorites.length === 0 ? (
++        // Improved, delightful empty state
++        <div className="flex flex-col items-center justify-center px-8 pt-16 text-center">
++          <div className="w-16 h-16 rounded-full bg-[#E8F4FF] flex items-center justify-center mb-4">
++            <MapPin size={32} className="text-[#0A7CFF]" />
+           </div>
+-        ))}
+-      </div>
++          <div className="font-semibold text-lg tracking-[-0.3px]">No favorites yet</div>
++          <p className="text-[#6C6C6E] text-sm mt-2 max-w-[260px]">
++            Save places you visit often for instant one-tap bookings from this tab.
++          </p>
++          <button
++            onClick={() => navigate('/add-place')}
++            className="mt-6 btn btn-primary px-6 flex items-center gap-2 text-sm"
++          >
++            <Plus size={16} /> Add your first place
++          </button>
++          <div className="mt-4 text-[10px] text-[#8E8E93]">Saved places persist across sessions</div>
++        </div>
++      ) : (
++        <div className="mt-4 px-3 space-y-2">
++          {favorites.map((place) => {
++            const icon = getPlaceIcon(place.name);
++            return (
++              <div
++                key={place.id}
++                onClick={() => handleBookFromFavorite(place)}
++                className="card flex items-center gap-4 p-4 active:bg-white border border-[#e4e9f2] rounded-[12px] cursor-pointer active:scale-[0.985] transition-transform"
++              >
++                <div className="text-3xl w-10 flex-shrink-0">{icon}</div>
++                <div className="flex-1 min-w-0">
++                  <div className="font-semibold text-[15px]">{place.name}</div>
++                  <div className="text-[#8f9bb3] text-sm flex items-center gap-1 mt-0.5">
++                    <MapPin size={13} /> {place.address}
++                  </div>
++                </div>
+ 
+-      {FAVORITES.length === 0 && (
+-        <div className="text-center py-12 text-[#8f9bb3] text-sm">No favorites yet</div>
++                {/* Remove action (does not trigger booking) */}
++                <button
++                  onClick={(e) => handleRemove(place.id, place.name, e)}
++                  className="p-2 -mr-1 text-[#8E8E93] active:text-[#FF3B30] rounded-full active:bg-red-50 transition-colors"
++                  aria-label={`Remove ${place.name}`}
++                >
++                  <Trash2 size={16} />
++                </button>
++              </div>
++            );
++          })}
++        </div>
+       )}
+ 
+-      <div className="px-4 mt-8">
+-        <button
+-          onClick={() => navigate('/add-place')}
+-          className="w-full flex items-center justify-center gap-2 text-[#41d5fb] text-sm font-medium py-3 border border-dashed border-[#41d5fb]/40 rounded-[12px] active:bg-white/70"
+-        >
+-          <Plus size={16} /> Add new place (Figma screen 13)
+-        </button>
+-      </div>
++      {/* Quick add CTA always available when list present (matches Figma 13 entry) */}
++      {favorites.length > 0 && (
++        <div className="px-4 mt-8">
++          <button
++            onClick={() => navigate('/add-place')}
++            className="w-full flex items-center justify-center gap-2 text-[#41d5fb] text-sm font-medium py-3 border border-dashed border-[#41d5fb]/40 rounded-[12px] active:bg-white/70"
++          >
++            <Plus size={16} /> Add new place (Figma screen 13)
++          </button>
++        </div>
++      )}
+     </div>
+   );
+ }
+diff --git a/src/screens/ProfileScreen.tsx b/src/screens/ProfileScreen.tsx
+index fcea5be..9582054 100644
+--- a/src/screens/ProfileScreen.tsx
++++ b/src/screens/ProfileScreen.tsx
+@@ -4,11 +4,12 @@ import { useAppStore } from '../stores/useAppStore';
+ 
+ export function ProfileScreen() {
+   const navigate = useNavigate();
+-  const { user, logout, rideHistory } = useAppStore();
++  const { user, logout, rideHistory, favorites } = useAppStore();
+ 
+   const stats = {
+     totalRides: rideHistory.length,
+     totalSpent: rideHistory.reduce((sum, r) => sum + r.price, 0),
++    totalFavorites: favorites.length,
+   };
+ 
+   return (
+@@ -28,14 +29,18 @@ export function ProfileScreen() {
+           </div>
+         </div>
+ 
+-        <div className="mt-6 grid grid-cols-2 gap-3">
++        <div className="mt-6 grid grid-cols-3 gap-3">
+           <div className="bg-white rounded-3xl p-4 border border-[#E5E5EA]">
+             <div className="text-xs text-[#8E8E93]">TOTAL RIDES</div>
+             <div className="text-3xl font-semibold mt-1">{stats.totalRides}</div>
+           </div>
+           <div className="bg-white rounded-3xl p-4 border border-[#E5E5EA]">
+             <div className="text-xs text-[#8E8E93]">TOTAL SPENT</div>
+-            <div className="text-3xl font-semibold mt-1">${stats.totalSpent}</div>
++            <div className="text-3xl font-semibold mt-1 tabular-nums">${stats.totalSpent.toFixed(2)}</div>
++          </div>
++          <div className="bg-white rounded-3xl p-4 border border-[#E5E5EA]">
++            <div className="text-xs text-[#8E8E93]">FAVORITES</div>
++            <div className="text-3xl font-semibold mt-1">{stats.totalFavorites}</div>
+           </div>
+         </div>
+ 
+@@ -44,7 +49,7 @@ export function ProfileScreen() {
+             { label: 'Payment Methods', action: () => toast('Payment methods', { description: 'Opens Figma flow 17-19 (demo)' }) },
+             { label: 'Ride History', action: () => navigate('/activity') },
+             { label: 'Saved Places', action: () => navigate('/favorites') },
+-            { label: 'Help & Support', action: () => {} },
++            { label: 'Help & Support', action: () => toast.info('Help & Support', { description: 'In-app support chat would open here (demo)' }) },
+           ].map((item, i) => (
+             <button
+               key={i}

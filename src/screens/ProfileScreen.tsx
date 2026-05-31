@@ -4,11 +4,12 @@ import { useAppStore } from '../stores/useAppStore';
 
 export function ProfileScreen() {
   const navigate = useNavigate();
-  const { user, logout, rideHistory } = useAppStore();
+  const { user, logout, rideHistory, favorites } = useAppStore();
 
   const stats = {
     totalRides: rideHistory.length,
     totalSpent: rideHistory.reduce((sum, r) => sum + r.price, 0),
+    totalFavorites: favorites.length,
   };
 
   return (
@@ -28,14 +29,18 @@ export function ProfileScreen() {
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-3">
+        <div className="mt-6 grid grid-cols-3 gap-3">
           <div className="bg-white rounded-3xl p-4 border border-[#E5E5EA]">
             <div className="text-xs text-[#8E8E93]">TOTAL RIDES</div>
             <div className="text-3xl font-semibold mt-1">{stats.totalRides}</div>
           </div>
           <div className="bg-white rounded-3xl p-4 border border-[#E5E5EA]">
             <div className="text-xs text-[#8E8E93]">TOTAL SPENT</div>
-            <div className="text-3xl font-semibold mt-1">${stats.totalSpent}</div>
+            <div className="text-3xl font-semibold mt-1 tabular-nums">${stats.totalSpent.toFixed(2)}</div>
+          </div>
+          <div className="bg-white rounded-3xl p-4 border border-[#E5E5EA]">
+            <div className="text-xs text-[#8E8E93]">FAVORITES</div>
+            <div className="text-3xl font-semibold mt-1">{stats.totalFavorites}</div>
           </div>
         </div>
 
@@ -44,7 +49,7 @@ export function ProfileScreen() {
             { label: 'Payment Methods', action: () => toast('Payment methods', { description: 'Opens Figma flow 17-19 (demo)' }) },
             { label: 'Ride History', action: () => navigate('/activity') },
             { label: 'Saved Places', action: () => navigate('/favorites') },
-            { label: 'Help & Support', action: () => {} },
+            { label: 'Help & Support', action: () => toast.info('Help & Support', { description: 'In-app support chat would open here (demo)' }) },
           ].map((item, i) => (
             <button
               key={i}
