@@ -367,27 +367,9 @@ textarea:focus-visible {
   right: 10px !important;
 }
 
-/* "起点" label for user location marker in Explore map */
-.cargo-user-loc {
-  position: relative;
-}
-
-.cargo-user-label {
-  position: absolute;
-  top: -26px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #0A7CFF;
-  color: white;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 9999px;
-  white-space: nowrap;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.25);
-  pointer-events: none;
-  z-index: 10;
-}
+/* Clean global map for destination selection.
+   No visual marker for the starting point on the map itself.
+   Origin (起点) is taken from the booking store and used for the route preview + price only. */
 
 /* Hide default MapLibre attribution (we render a custom one) */
 .map-container .maplibregl-ctrl-attrib {
