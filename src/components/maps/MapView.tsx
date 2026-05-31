@@ -181,12 +181,14 @@ export function MapView({
         marker.on('dragend', () => {
           const pos = marker.getLngLat();
           const newCoords: LatLng = { lat: pos.lat, lng: pos.lng };
+          
+          // Optimistic update so button stays enabled during drag
+          setSelectedDest({ coords: newCoords, address: 'Selected location' });
+          
           debouncedReverse(newCoords);
-          // Immediately refresh the 起点→终点 line so connection stays clear while dragging
           if (pickupCoords) {
             updateRoutePreview(pickupCoords, newCoords);
           }
-          // Keep camera following a little for premium feel (no full refit during drag)
           map.panTo([newCoords.lng, newCoords.lat], { duration: 180 });
         });
 
@@ -377,8 +379,16 @@ export function MapView({
           // Tap anywhere on map → place distinct 终点 marker + immediately draw clear line from 起点 + fit view
           map.on('click', (e) => {
             const coords: LatLng = { lat: e.lngLat.lat, lng: e.lngLat.lng };
+            
+            // Optimistic: immediately treat the tap as the destination
+            // This makes "Set destination" button active right away (no waiting for network)
+            setSelectedDest({ 
+              coords, 
+              address: 'Selected location' 
+            });
+            
             updateDestMarker(coords);
-            debouncedReverse(coords);
+            debouncedReverse(coords); // will update the real address later
             updateRoutePreview(pickupCoords, coords);
             if (pickupCoords) {
               fitRouteInView(pickupCoords, coords);
