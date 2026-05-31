@@ -183,7 +183,7 @@ export function MapView({
           const newCoords: LatLng = { lat: pos.lat, lng: pos.lng };
           
           // Optimistic update so button stays enabled during drag
-          setSelectedDest({ coords: newCoords, address: 'Selected location' });
+          setSelectedDest({ coords: newCoords, address: '正在获取地址...' });
           
           debouncedReverse(newCoords);
           if (pickupCoords) {
@@ -380,11 +380,10 @@ export function MapView({
           map.on('click', (e) => {
             const coords: LatLng = { lat: e.lngLat.lat, lng: e.lngLat.lng };
             
-            // Optimistic: immediately treat the tap as the destination
-            // This makes "Set destination" button active right away (no waiting for network)
+            // Optimistic but stable: use a consistent loading string to prevent text flash
             setSelectedDest({ 
               coords, 
-              address: 'Selected location' 
+              address: '正在获取地址...' 
             });
             
             updateDestMarker(coords);
@@ -814,10 +813,19 @@ export function MapView({
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-[10px] uppercase tracking-[1px] text-[#8E8E93]">终点</div>
-                <div className="font-semibold text-[15px] leading-snug text-balance">
-                  {selectedDest ? selectedDest.address : '请在地图上点击或搜索选择'}
+                <div className="font-semibold text-[15px] leading-snug text-balance flex items-center gap-2 transition-opacity">
+                  {selectedDest ? (
+                    <>
+                      {selectedDest.address}
+                      {selectedDest.address === '正在获取地址...' && (
+                        <span className="inline-block w-3 h-3 border-2 border-[#0A7CFF] border-t-transparent rounded-full animate-spin" />
+                      )}
+                    </>
+                  ) : (
+                    '请在地图上点击或搜索选择'
+                  )}
                 </div>
-                {pickupCoords && selectedDest && (
+                {pickupCoords && selectedDest && selectedDest.address !== '正在获取地址...' && (
                   <div className="text-[11px] text-[#6C6C6E] mt-0.5 tabular-nums">
                     约 {haversineMiles(pickupCoords, selectedDest.coords).toFixed(1)} 英里
                   </div>
