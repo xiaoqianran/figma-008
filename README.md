@@ -1,12 +1,6 @@
 # CARGO — 高保真 Figma 复刻（完整套件）
 
-<!-- 
-  GitHub 状态徽章（把 OWNER/REPO 替换成你的仓库路径，例如 yuminghui/cargo-figma-replica）
-  替换后即可在 GitHub 首页和 README 看到实时的 CI / 部署状态
--->
-[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/ci.yml)
 [![Deploy (GitHub Pages)](https://github.com/OWNER/REPO/actions/workflows/deploy.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/deploy.yml)
-[![Deploy (Remote)](https://github.com/OWNER/REPO/actions/workflows/deploy-remote.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/deploy-remote.yml)
 
 **「CARGO - Car Booking & Sharing App」设计系统的像素级、完全可交互的网页复刻版**，来源于已连接的 Figma 文件（组件总览页 + 20+ 个生产级屏幕）。
 
@@ -236,125 +230,20 @@ Built with ❤️ for fidelity and craft.
 
 ---
 
-## 持续集成 CI（GitHub Actions）
+## 部署
 
-每次 push / PR 都会自动运行完整 CI 检查，结果会直接显示在 GitHub 的 commit 列表和 Pull Request 页面上（绿色 ✓ / 红色 ✗）。
+本项目仅使用 GitHub Pages 部署（已配置好 `deploy.yml`）。
 
-### 包含的检查项
-
-| 检查项           | 命令                     | 说明                              |
-|------------------|--------------------------|-----------------------------------|
-| Lint + Format    | `biome ci .`             | 代码规范 + 格式化检查             |
-| TypeScript       | `tsc --noEmit`           | 严格类型检查                      |
-| Build            | `npm run build`          | 生产构建验证                      |
-| Unit Tests       | `vitest run`             | 单元测试                          |
-| E2E Tests        | `playwright test`        | 端到端流程测试（完整预订流程）    |
-
-### 工作流文件
-
-- `.github/workflows/ci.yml` — 主 CI（推荐在 PR 中开启 Required Status Checks）
-
----
-
-## 远程自部署（GitHub Actions）
-
-本项目已提供开箱即用的远程服务器部署工作流（区别于 GitHub Pages）。
-
-### 快速配置
-
-1. 在仓库设置中把 **GitHub Pages → Source** 改为 **GitHub Actions**（你已经做完了 👍）
-
-2. 新建以下 **Secrets**（路径：Settings → Secrets and variables → Actions → New repository secret）：
-
-   | Secret 名称          | 说明                                   | 示例                     |
-   |----------------------|----------------------------------------|--------------------------|
-   | `DEPLOY_HOST`        | 服务器 IP 或域名                       | `123.45.67.89`           |
-   | `SSH_PRIVATE_KEY`    | SSH 私钥完整内容                       | `-----BEGIN OPENSSH...`  |
-   | `DEPLOY_USER`        | SSH 用户名（可选，默认 root）          | `root` / `ubuntu`        |
-   | `DEPLOY_PATH`        | 远程网站根目录（可选）                 | `/var/www/cargo`         |
-   | `DEPLOY_PORT`        | SSH 端口（可选，默认 22）              | `22`                     |
-   | `RELOAD_NGINX`       | 部署后是否重载 Nginx（可选）           | `true`                   |
-
-3. 在远程服务器配置 Nginx（关键！必须支持 SPA 路由）：
-
-   ```nginx
-   server {
-       listen 80;
-       server_name yourdomain.com;
-
-       root /var/www/cargo;        # 对应 DEPLOY_PATH
-       index index.html;
-
-       location / {
-           try_files $uri $uri/ /index.html;
-       }
-
-       # 静态资源长期缓存
-       location /assets {
-           expires 1y;
-           add_header Cache-Control "public, immutable";
-       }
-   }
-   ```
-
-4. 推送到 `main` 分支或手动触发 **Actions → "Deploy to Remote Server (自部署)"** 即可自动部署。
-
-### 已有工作流说明
-
-- `.github/workflows/deploy.yml` → GitHub Pages（子路径 `/figma-008/`）
-- `.github/workflows/deploy-remote.yml` → 你的远程服务器（根路径 `/`）
-
-两个工作流可同时存在，互不影响。
+- 推送到 `main` 分支后会自动部署到 GitHub Pages（路径 `/figma-008/`）。
+- 无需配置任何 Secrets。
 
 ---
 
 ## English
 
-## Continuous Integration (GitHub Actions)
+## Deployment
 
-Every push and pull request automatically runs the full CI pipeline. Results appear directly on commits and PRs as green checkmarks (✓) or red crosses (✗).
+This project only uses GitHub Pages deployment (configured via `deploy.yml`).
 
-### Checks Included
-
-| Check            | Command                  | Description                              |
-|------------------|--------------------------|------------------------------------------|
-| Lint + Format    | `biome ci .`             | Code style + formatting enforcement      |
-| TypeScript       | `tsc --noEmit`           | Strict type checking                     |
-| Build            | `npm run build`          | Production build verification            |
-| Unit Tests       | `vitest run`             | Unit tests                               |
-| E2E Tests        | `playwright test`        | Full booking flow end-to-end tests       |
-
-### Workflow Files
-
-- `.github/workflows/ci.yml` — Main CI (recommended to set as Required Status Check on PRs)
-
----
-
-## Remote Self-Deployment (GitHub Actions)
-
-A dedicated workflow for deploying to your own VPS is included.
-
-### Quick Setup
-
-1. Set GitHub Pages source to **GitHub Actions** in repo settings (already done).
-
-2. Configure these **Repository Secrets**:
-
-   - `DEPLOY_HOST` — Server IP/domain
-   - `SSH_PRIVATE_KEY` — Full SSH private key
-   - `DEPLOY_PATH` — e.g. `/var/www/cargo` (optional)
-   - `DEPLOY_USER`, `DEPLOY_PORT`, `RELOAD_NGINX` (optional)
-
-3. On your server, make sure Nginx has SPA fallback:
-
-   ```nginx
-   location / {
-       try_files $uri $uri/ /index.html;
-   }
-   ```
-
-4. Push to `main` or manually run the "Deploy to Remote Server (自部署)" workflow.
-
-Two workflows coexist peacefully:
-- `deploy.yml` → GitHub Pages
-- `deploy-remote.yml` → Your own server (recommended for production)
+- Pushing to `main` automatically deploys to GitHub Pages (under subpath `/figma-008/`).
+- No secrets or additional configuration required.
