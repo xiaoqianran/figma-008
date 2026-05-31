@@ -97,13 +97,14 @@ function createDestinationMarkerElement(): HTMLDivElement {
   return el;
 }
 
-// Pulsing user location marker (iOS-like blue dot + halo)
+// Pulsing user location marker (iOS-like blue dot + halo) with clear "起点" label
 function createUserLocationElement(): HTMLDivElement {
   const el = document.createElement('div');
   el.className = 'cargo-user-loc';
   el.innerHTML = `
     <div class="cargo-user-dot-outer"></div>
     <div class="cargo-user-dot"></div>
+    <div class="cargo-user-label">起点</div>
   `;
   return el;
 }
