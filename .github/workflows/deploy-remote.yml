@@ -24,7 +24,9 @@ jobs:
     environment:
       name: production
       url: ${{ vars.DEPLOY_URL || 'https://你的域名.com' }}
-
+    env:
+      # Force GitHub's JavaScript actions to run on Node 24 (prevents deprecation warnings)
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout
         uses: actions/checkout@v6
