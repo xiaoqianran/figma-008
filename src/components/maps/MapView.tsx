@@ -3,6 +3,7 @@ import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { MapPin, Navigation, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../stores/useAppStore';
 import {
   type GeocodeResult,
@@ -28,9 +29,8 @@ import {
  * - Bottom floating confirm panel with Figma-matched aesthetics (uses existing tokens)
  * - Touch friendly, 60fps pan/zoom via MapLibre
  * - Lazy-safe (parent should lazy-load), full cleanup on unmount
- * - Clean global map experience: only destination pin is shown on the map.
- * - Starting point (起点) is the user's current location from the store (used for route line + price only, not rendered visually to keep the map clean).
- * - Destination (终点) chosen by tapping the map. Clear connecting line + auto-fit when selected.
+ * - Custom SVG markers (flag pin for dest + "终点" label, pulsing green dot + "起点" badge for user/pickup)
+ * - Pickup (起点) is fixed origin (from Home "Where to?" or booking); dest (终点) chosen on map with immediate connecting line
  * - Small legal attribution footer
  *
  * Tile source (free, no key):
@@ -103,10 +103,18 @@ function createDestinationMarkerElement(): HTMLDivElement {
   return el;
 }
 
-// We deliberately do NOT show a visual marker for the starting point on the map.
-// The origin (起点) comes from the booking store (user's location) and is only used
-// internally for drawing the route line and calculating price. The map stays clean
-// so the user can freely pick the destination (终点).
+// Pulsing user location marker (iOS-like green dot + halo) — now prominently labeled "起点"
+// Start (pickup) is ALWAYS the fixed origin: user's current / booking location.
+function createUserLocationElement(): HTMLDivElement {
+  const el = document.createElement('div');
+  el.className = 'cargo-user-loc';
+  el.innerHTML = `
+    <div class="cargo-user-dot-outer"></div>
+    <div class="cargo-user-dot"></div>
+    <div class="cargo-user-label">起点</div>
+  `;
+  return el;
+}
 
 export function MapView({
   onConfirmDestination,
@@ -121,9 +129,15 @@ export function MapView({
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
-  const [selectedDest, setSelectedDest] = useState<{ coords: LatLng; address: string } | null>(
-    null
-  );
+
+  // Refactored destination state to eliminate flicker:
+  // - destCoords set immediately for instant button + route preview responsiveness
+  // - destAddress + isResolvingAddress drive smooth "Loading address…" UI instead of hard "Selected location" swaps
+  // Panel derives display from these + uses Framer Motion transitions
+  const [destCoords, setDestCoords] = useState<LatLng | null>(null);
+  const [destAddress, setDestAddress] = useState<string | null>(null);
+  const [isResolvingAddress, setIsResolvingAddress] = useState(false);
+
   const [userLocation, setUserLocation] = useState<LatLng>(initialPickupCoords || SF_DEFAULT);
   const [isLocating, setIsLocating] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -133,6 +147,7 @@ export function MapView({
   const [isConfirming, setIsConfirming] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
+  const currentDestCoordsRef = useRef<LatLng | null>(null);
 
   // Store access for pickup (read-only in map for preview)
   const { booking } = useAppStore();
@@ -141,69 +156,37 @@ export function MapView({
   const pickupCoords: LatLng = booking.pickupCoords || initialPickupCoords || userLocation;
 
   // Debounced reverse geocode for marker drag / tap
+  // Sets loading state + real address only when coords still current (stale-proof)
   const debouncedReverse = useCallback(
     debounce(async (coords: LatLng) => {
       const ac = new AbortController();
       abortControllerRef.current = ac;
 
+      setIsResolvingAddress(true);
       const address = await reverseGeocode(coords, ac.signal);
-      if (address) {
-        setSelectedDest({ coords, address });
+
+      const current = currentDestCoordsRef.current;
+      const stillCurrent =
+        current &&
+        Math.abs(current.lat - coords.lat) < 0.0001 &&
+        Math.abs(current.lng - coords.lng) < 0.0001;
+
+      if (stillCurrent) {
+        if (address) {
+          setDestAddress(address);
+        } else {
+          setDestAddress(`${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`);
+        }
+        setIsResolvingAddress(false);
       }
+      // if not current, ignore (newer selection already managing state)
     }, 420),
     []
   );
 
-  // Update or create the destination marker (draggable)
-  const updateDestMarker = useCallback(
-    (coords: LatLng, address?: string) => {
-      const map = mapRef.current;
-      if (!map) return;
-
-      if (!destMarkerRef.current) {
-        const el = createDestinationMarkerElement();
-        const marker = new maplibregl.Marker({
-          element: el,
-          anchor: 'bottom',
-          draggable: true,
-        })
-          .setLngLat([coords.lng, coords.lat] as LngLatLike)
-          .addTo(map);
-
-        // Drag handling (production quality – fires on end)
-        marker.on('dragend', () => {
-          const pos = marker.getLngLat();
-          const newCoords: LatLng = { lat: pos.lat, lng: pos.lng };
-          
-          // Optimistic update so button stays enabled during drag
-          setSelectedDest({ coords: newCoords, address: '正在获取地址...' });
-          
-          debouncedReverse(newCoords);
-          if (pickupCoords) {
-            updateRoutePreview(pickupCoords, newCoords);
-          }
-          map.panTo([newCoords.lng, newCoords.lat], { duration: 180 });
-        });
-
-        // Click on marker recenters nicely
-        el.addEventListener('click', (e) => {
-          e.stopPropagation();
-          map.flyTo({ center: [coords.lng, coords.lat], zoom: PIN_ZOOM, duration: 420 });
-        });
-
-        destMarkerRef.current = marker;
-      } else {
-        destMarkerRef.current.setLngLat([coords.lng, coords.lat] as LngLatLike);
-      }
-
-      if (address) {
-        setSelectedDest({ coords, address });
-      }
-    },
-    [debouncedReverse]
-  );
-
   // Draw / update straight-line route preview layer (high value, zero cost)
+  // STABILITY FIX: use setData on existing source for live updates (no remove/add flicker on rapid taps/drags)
+  // Declared early so updateDestMarker (which closes over it in drag handler + lists in deps) is valid.
   const updateRoutePreview = useCallback((pickup: LatLng, dest: LatLng) => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
@@ -220,7 +203,13 @@ export function MapView({
       properties: {},
     };
 
-    // Remove old layer/source if exists (safe)
+    const existingSource = map.getSource(routeLayerId) as maplibregl.GeoJSONSource | undefined;
+    if (existingSource) {
+      existingSource.setData(geojson);
+      return;
+    }
+
+    // First time: create (remove any stale just in case)
     if (map.getLayer(routeLayerId)) map.removeLayer(routeLayerId);
     if (map.getSource(routeLayerId)) map.removeSource(routeLayerId);
 
@@ -246,6 +235,59 @@ export function MapView({
     });
   }, []);
 
+  // Update or create the destination marker (draggable)
+  // NOTE: No longer does any address state setting inside (prevents races). Callers manage destCoords/destAddress/isResolving.
+  // Drag/tap now use loading state + debounced reverse for flicker-free address updates.
+  const updateDestMarker = useCallback(
+    (coords: LatLng) => {
+      const map = mapRef.current;
+      if (!map) return;
+
+      if (!destMarkerRef.current) {
+        const el = createDestinationMarkerElement();
+        const marker = new maplibregl.Marker({
+          element: el,
+          anchor: 'bottom',
+          draggable: true,
+        })
+          .setLngLat([coords.lng, coords.lat] as LngLatLike)
+          .addTo(map);
+
+        // Drag handling (production quality – fires on end)
+        marker.on('dragend', () => {
+          const pos = marker.getLngLat();
+          const newCoords: LatLng = { lat: pos.lat, lng: pos.lng };
+
+          // Immediately update coords (for responsive line + button), show loading for address (no 'Selected location' flash)
+          setDestCoords(newCoords);
+          currentDestCoordsRef.current = newCoords;
+          setDestAddress(null);
+          setIsResolvingAddress(true);
+
+          debouncedReverse(newCoords);
+          if (pickupCoords) {
+            updateRoutePreview(pickupCoords, newCoords);
+          }
+          // Deliberately NO fitRouteInView on drag adjustments (stability: only fit on initial selection)
+          map.panTo([newCoords.lng, newCoords.lat], { duration: 180 });
+        });
+
+        // Click on marker recenters nicely (use live position to avoid stale closure)
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const live = destMarkerRef.current?.getLngLat();
+          const c = live ? { lng: live.lng, lat: live.lat } : coords;
+          map.flyTo({ center: [c.lng, c.lat], zoom: PIN_ZOOM, duration: 420 });
+        });
+
+        destMarkerRef.current = marker;
+      } else {
+        destMarkerRef.current.setLngLat([coords.lng, coords.lat] as LngLatLike);
+      }
+    },
+    [debouncedReverse, pickupCoords, updateRoutePreview]
+  );
+
   // Fit map view to show BOTH 起点 (pickup) and 终点 (dest) + the connecting line clearly.
   // Called on explicit destination selection (tap, search, quick place) so the origin→destination relationship is instantly obvious.
   // Does not fight free panning after the fact.
@@ -270,11 +312,28 @@ export function MapView({
     }
   }, []);
 
-  // We no longer render a visual marker for the user's starting location on the map.
-  // The origin is only used for the route line (behind the scenes) and text in the UI.
-  // This keeps the map clean for destination selection.
+  // Place / update user location marker (non-draggable, pulsing)
+  const updateUserMarker = useCallback((coords: LatLng) => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (!userMarkerRef.current) {
+      const el = createUserLocationElement();
+      const marker = new maplibregl.Marker({
+        element: el,
+        anchor: 'center',
+      })
+        .setLngLat([coords.lng, coords.lat] as LngLatLike)
+        .addTo(map);
+      userMarkerRef.current = marker;
+    } else {
+      userMarkerRef.current.setLngLat([coords.lng, coords.lat] as LngLatLike);
+    }
+  }, []);
 
   // Fly camera + optionally move marker + reverse geocode
+  // Now also manages dest state: if label provided (search/quick/geoloc), set real address immediately (no loading).
+  // For map taps/drags we use the loading path instead (elsewhere).
   const flyToLocation = useCallback(
     async (coords: LatLng, withMarker = true, label?: string) => {
       const map = mapRef.current;
@@ -291,8 +350,21 @@ export function MapView({
       if (withMarker) {
         // Small delay so fly feels natural before marker snaps
         setTimeout(() => {
-          updateDestMarker(coords, label);
-          // Immediately draw clear 起点→终点 line + fit view to show the full connection
+          updateDestMarker(coords); // visual only now
+
+          // Set dest state immediately for responsiveness
+          setDestCoords(coords);
+          currentDestCoordsRef.current = coords;
+          if (label) {
+            setDestAddress(label);
+            setIsResolvingAddress(false);
+          } else {
+            setDestAddress(null);
+            setIsResolvingAddress(true);
+            debouncedReverse(coords);
+          }
+
+          // Immediately draw clear 起点→终点 line + fit view (explicit navigation => fit is desired)
           if (pickupCoords) {
             updateRoutePreview(pickupCoords, coords);
             fitRouteInView(pickupCoords, coords);
@@ -300,7 +372,7 @@ export function MapView({
         }, 120);
       }
     },
-    [updateDestMarker, updateRoutePreview, pickupCoords, fitRouteInView]
+    [updateDestMarker, updateRoutePreview, pickupCoords, fitRouteInView, debouncedReverse]
   );
 
   // Core map initialization (once)
@@ -336,15 +408,40 @@ export function MapView({
           if (cancelled) return;
           setIsMapLoaded(true);
 
-          // Clean global map: no visual marker for the starting point.
-          // The origin (起点) is handled by the store (user's location) and used only for the route line + price.
-          // User freely picks the destination on a clean map.
+          // Always show clear pickup / user location marker first — prominently labeled "起点" (green)
+          // This is the FIXED origin when coming from Home "Where to?". Always visible + labeled from t=0.
+          updateUserMarker(pickupCoords || userLocation);
 
           // Do NOT auto-place a destination marker on load.
           // Let the user explicitly choose the destination (终点) by tapping or searching.
+          // On first choice: distinct "终点" pin appears + solid blue line instantly connects 起点→终点 + view fits both.
+          // This makes the UX instantly communicate: "起点 = 我 (green) → 终点 = 我选的 (pin)".
 
           // If we already have a previous destination (coming back in flow), restore it + draw route + fit to show clear 起点→终点
+          // State management here ensures we start with resolved or loading (no flicker on mount)
           if (initialDestCoords) {
+            setDestCoords(initialDestCoords);
+            currentDestCoordsRef.current = initialDestCoords;
+            const priorAddr = booking.destinationLocation;
+            if (priorAddr) {
+              setDestAddress(priorAddr);
+              setIsResolvingAddress(false);
+            } else {
+              setDestAddress(null);
+              setIsResolvingAddress(true);
+              // Immediate (non-debounced) reverse for restore path
+              reverseGeocode(initialDestCoords).then((addr) => {
+                const c = currentDestCoordsRef.current;
+                if (
+                  c &&
+                  Math.abs(c.lat - initialDestCoords.lat) < 0.0001 &&
+                  Math.abs(c.lng - initialDestCoords.lng) < 0.0001
+                ) {
+                  setDestAddress(addr || `${initialDestCoords.lat.toFixed(4)}, ${initialDestCoords.lng.toFixed(4)}`);
+                  setIsResolvingAddress(false);
+                }
+              });
+            }
             updateDestMarker(initialDestCoords);
             if (pickupCoords) {
               updateRoutePreview(pickupCoords, initialDestCoords);
@@ -352,20 +449,23 @@ export function MapView({
             }
           }
 
-          // Tap anywhere on map → place distinct 终点 marker + immediately draw clear line from 起点 + fit view
+          // Tap anywhere on map → place distinct 终点 marker + immediately draw clear line from 起点
+          // KEY FLICKER FIX: set coords + loading state immediately (button responsive), use "Loading address…" + transition instead of 'Selected location' hard-swap.
+          // Fit ONLY on first selection (subsequent taps just adjust without camera jump for stability)
           map.on('click', (e) => {
             const coords: LatLng = { lat: e.lngLat.lat, lng: e.lngLat.lng };
-            
-            // Optimistic but stable: use a consistent loading string to prevent text flash
-            setSelectedDest({ 
-              coords, 
-              address: '正在获取地址...' 
-            });
-            
+
+            const isFirstSelection = !currentDestCoordsRef.current;
+
+            setDestCoords(coords);
+            currentDestCoordsRef.current = coords;
+            setDestAddress(null);
+            setIsResolvingAddress(true);
+
             updateDestMarker(coords);
-            debouncedReverse(coords); // will update the real address later
+            debouncedReverse(coords); // will update the real address later (stale-safe)
             updateRoutePreview(pickupCoords, coords);
-            if (pickupCoords) {
+            if (isFirstSelection && pickupCoords) {
               fitRouteInView(pickupCoords, coords);
             }
           });
@@ -437,7 +537,7 @@ export function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run exactly once
 
-  // When external initial coords change (rare), sync marker
+  // When external initial coords change (rare), sync marker (visual only; state restore handled at init)
   useEffect(() => {
     if (initialDestCoords && isMapLoaded) {
       updateDestMarker(initialDestCoords);
@@ -462,7 +562,7 @@ export function MapView({
           const coords: LatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
 
           setUserLocation(coords);
-          // No visual user marker on map (clean global map)
+          updateUserMarker(coords);
 
           const map = mapRef.current;
           if (map) {
@@ -473,7 +573,11 @@ export function MapView({
           const addr = await reverseGeocode(coords);
           if (!centerOnly) {
             // For destination picker flow, center + offer as potential dest too
-            updateDestMarker(coords, addr || 'Your current location');
+            setDestCoords(coords);
+            currentDestCoordsRef.current = coords;
+            setDestAddress(addr || 'Your current location');
+            setIsResolvingAddress(false);
+            updateDestMarker(coords); // visual only
             if (pickupCoords) {
               updateRoutePreview(pickupCoords, coords);
               fitRouteInView(pickupCoords, coords);
@@ -488,12 +592,16 @@ export function MapView({
           setIsLocating(false);
           const fallback = SF_DEFAULT;
           setUserLocation(fallback);
-          // No visual user marker on map (clean global map)
+          updateUserMarker(fallback);
           const map = mapRef.current;
           if (map)
             map.flyTo({ center: [fallback.lng, fallback.lat], zoom: DEFAULT_ZOOM, duration: 400 });
           if (!centerOnly) {
-            updateDestMarker(fallback, 'San Francisco, CA (demo)');
+            setDestCoords(fallback);
+            currentDestCoordsRef.current = fallback;
+            setDestAddress('San Francisco, CA (demo)');
+            setIsResolvingAddress(false);
+            updateDestMarker(fallback); // visual only
             if (pickupCoords) {
               updateRoutePreview(pickupCoords, fallback);
               fitRouteInView(pickupCoords, fallback);
@@ -507,7 +615,7 @@ export function MapView({
       flyToLocation,
       updateDestMarker,
       updateRoutePreview,
-      // updateUserMarker removed (no visual origin marker on map)
+      updateUserMarker,
       userLocation,
       pickupCoords,
       fitRouteInView,
@@ -575,15 +683,26 @@ export function MapView({
   };
 
   // Confirm flow – exactly as required (update store + route to /service)
+  // Robust: if still resolving address on tap (rare, user fast-click), force a resolve so we never persist the loading placeholder text.
   const handleConfirm = async () => {
-    if (!selectedDest) return;
+    if (!destCoords) return;
 
     setIsConfirming(true);
     // Small delay for perceived reliability (matches high-quality prototypes)
     await new Promise(r => setTimeout(r, 120));
 
-    const price = calculateEstimatedPrice(pickupCoords, selectedDest.coords);
-    onConfirmDestination(selectedDest.address, selectedDest.coords, price);
+    let addressToUse = destAddress;
+    if (!addressToUse || isResolvingAddress) {
+      try {
+        const forcedAddr = await reverseGeocode(destCoords);
+        addressToUse = forcedAddr || `${destCoords.lat.toFixed(4)}, ${destCoords.lng.toFixed(4)}`;
+      } catch {
+        addressToUse = `${destCoords.lat.toFixed(4)}, ${destCoords.lng.toFixed(4)}`;
+      }
+    }
+
+    const price = calculateEstimatedPrice(pickupCoords, destCoords);
+    onConfirmDestination(addressToUse, destCoords, price);
     // Note: parent usually navigates away, but reset in case
     setIsConfirming(false);
   };
@@ -648,7 +767,7 @@ export function MapView({
                 value={searchQuery}
                 onChange={handleSearchChange}
                 onFocus={() => setShowSuggestions(true)}
-                placeholder={selectedDest?.address || 'Where to?'}
+                placeholder={destCoords ? (destAddress || (isResolvingAddress ? 'Loading address…' : 'Selected location')) || 'Where to?' : 'Where to?'}
                 className="input h-11 w-full bg-[#F2F2F7] border-0 pl-10 text-[15px] placeholder:text-[#8E8E93] shadow-sm"
               />
               <MapPin className="absolute left-3.5 top-3.5 text-[#0A7CFF]" size={17} />
@@ -678,7 +797,7 @@ export function MapView({
 
           {/* Pickup indicator (subtle, always visible) — reinforces 起点 = fixed origin */}
           <div className="mt-1.5 pl-1 text-[10px] uppercase tracking-[0.5px] text-[#8E8E93] flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#0A7CFF]" /> 起点:{' '}
+            <div className="w-1.5 h-1.5 rounded-full bg-[#34C759]" /> 起点:{' '}
             {booking.pickupLocation || '我的位置'}
           </div>
         </div>
@@ -781,6 +900,7 @@ export function MapView({
             <div className="ml-3 my-1 h-3 border-l border-dashed border-[#E5E5EA]" />
 
             {/* Destination (终点) - prominent, updates live on tap/search/drag */}
+            {/* FLICKER ELIMINATION: derive display from destCoords + loading flag; use Framer Motion + AnimatePresence for smooth crossfade between "Loading address…" and real address. No more abrupt 'Selected location' → real swap. */}
             <div className="flex gap-3">
               <div className="flex-shrink-0 pt-0.5">
                 <div className="w-6 h-6 rounded bg-[#0A7CFF]/10 flex items-center justify-center">
@@ -789,26 +909,34 @@ export function MapView({
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-[10px] uppercase tracking-[1px] text-[#8E8E93]">终点</div>
-                <div className="font-semibold text-[15px] leading-snug text-balance flex items-center gap-2 transition-opacity">
-                  {selectedDest ? (
-                    <>
-                      {selectedDest.address}
-                      {selectedDest.address === '正在获取地址...' && (
-                        <span className="inline-block w-3 h-3 border-2 border-[#0A7CFF] border-t-transparent rounded-full animate-spin" />
-                      )}
-                    </>
-                  ) : (
-                    '请在地图上点击或搜索选择'
-                  )}
+                <div className="font-semibold text-[15px] leading-snug text-balance min-h-[20px]">
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.div
+                      key={destCoords ? (destAddress || (isResolvingAddress ? 'loading' : 'pending')) : 'no-dest'}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.18, ease: [0.23, 1.0, 0.32, 1] }}
+                    >
+                      {destCoords
+                        ? (destAddress || (isResolvingAddress ? 'Loading address…' : 'Selected location'))
+                        : '请在地图上点击或搜索选择'}
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
-                {pickupCoords && selectedDest && selectedDest.address !== '正在获取地址...' && (
-                  <div className="text-[11px] text-[#6C6C6E] mt-0.5 tabular-nums">
-                    约 {haversineMiles(pickupCoords, selectedDest.coords).toFixed(1)} 英里
-                  </div>
+                {pickupCoords && destCoords && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.15, delay: 0.03 }}
+                    className="text-[11px] text-[#6C6C6E] mt-0.5 tabular-nums"
+                  >
+                    约 {haversineMiles(pickupCoords, destCoords).toFixed(1)} 英里
+                  </motion.div>
                 )}
-                {!selectedDest && (
+                {!destCoords && (
                   <div className="text-[11px] text-[#6C6C6E] mt-0.5">
-                    点击地图任意位置选择终点 • 起点自动使用你的当前位置
+                    绿色圆点 = 你的起点（固定） • 地图点击 = 选择终点
                   </div>
                 )}
               </div>
@@ -818,7 +946,7 @@ export function MapView({
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={!selectedDest || isConfirming}
+            disabled={!destCoords || isConfirming}
             data-testid="set-destination-btn"
             className="btn btn-primary w-full h-[54px] text-[17px] font-semibold tracking-[-0.2px] shadow-md active:scale-[0.985] disabled:opacity-60 transition-all"
           >
@@ -827,7 +955,7 @@ export function MapView({
 
           <div className="text-center text-[10px] text-[#8E8E93] -mt-1 flex items-center justify-center gap-3">
             <span>Price estimate shown on next screen • Drag pin or tap map to adjust</span>
-            {!selectedDest && (
+            {!destCoords && (
               <button
                 onClick={handleUseCurrentAsDest}
                 className="text-[#0A7CFF] active:underline font-medium"
