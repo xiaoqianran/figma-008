@@ -54,7 +54,7 @@ export function ProfileScreen() {
             <button
               key={i}
               onClick={item.action}
-              className="w-full px-5 py-4 text-left flex justify-between items-center active:bg-zinc-50 border-b last:border-b-0 border-[#E5E5EA] text-[15px]"
+              className="w-full px-5 py-4 text-left flex justify-between items-center active:bg-zinc-50 active:scale-[0.995] transition-all border-b last:border-b-0 border-[#E5E5EA] text-[15px]"
             >
               <span>{item.label}</span>
               <span className="text-[#8E8E93]">›</span>
@@ -67,7 +67,7 @@ export function ProfileScreen() {
             logout();
             navigate('/');
           }}
-          className="mt-8 w-full py-3.5 text-[#FF3B30] font-semibold active:bg-red-50 rounded-2xl border border-[#FF3B30]/20"
+          className="mt-8 w-full py-3.5 text-[#FF3B30] font-semibold active:bg-red-50 active:scale-[0.985] transition-all rounded-2xl border border-[#FF3B30]/20"
         >
           Log Out
         </button>

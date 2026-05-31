@@ -1,0 +1,307 @@
+diff --git a/src/App.tsx b/src/App.tsx
+index 0c022cc..17618f2 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -18,12 +18,66 @@ import { SplashScreen } from './screens/SplashScreen';
+ import { VerifyPhoneScreen } from './screens/VerifyPhoneScreen';
+ import { useAppStore } from './stores/useAppStore';
+ 
++// Bottom tab bar with premium spring-animated sliding pill indicator
++// (Rendered from DeviceFrame for all 5 main tabs to guarantee presence + non-animating during switches)
++export function MainTabBar() {
++  const location = useLocation();
++  const navigate = useNavigate();
++  const tabs = [
++    { path: '/home', label: 'Home', icon: Home },
++    { path: '/destination', label: 'Explore', icon: MapPin },
++    { path: '/favorites', label: 'Favorites', icon: Heart },
++    { path: '/activity', label: 'Activity', icon: Clock },
++    { path: '/profile', label: 'Profile', icon: User },
++  ];
++
++  const active = tabs.findIndex((t) => location.pathname.startsWith(t.path));
++  const activeSafe = active === -1 ? 0 : active;
++  const pillLeft = `${(activeSafe / tabs.length) * 100}%`;
++  const pillWidth = `${(1 / tabs.length) * 100}%`;
++
++  return (
++    <div className="tab-bar absolute bottom-0 left-0 right-0 h-14 flex items-center justify-around z-50 border-t border-[#E5E5EA] bg-white/95 backdrop-blur-xl">
++      {/* Sliding active pill - spring animated for premium feel */}
++      <motion.div
++        className="absolute top-1 bottom-1 bg-[#0A7CFF]/10 rounded-2xl z-0"
++        style={{ left: pillLeft, width: pillWidth }}
++        transition={{ type: 'spring', stiffness: 420, damping: 32, mass: 0.7 }}
++        layoutId="tab-active-pill"
++      />
++
++      {tabs.map((tab, idx) => {
++        const Icon = tab.icon;
++        const isActive = idx === active;
++        return (
++          <button
++            key={tab.path}
++            type="button"
++            onClick={() => {
++              if (navigator.vibrate) navigator.vibrate(6);
++              navigate(tab.path);
++            }}
++            className={`relative flex flex-col items-center justify-center text-xs z-10 transition-colors ${isActive ? 'text-[#0A7CFF]' : 'text-[#8E8E93]'}`}
++          >
++            <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
++            <span className="mt-px">{tab.label}</span>
++          </button>
++        );
++      })}
++    </div>
++  );
++}
++
+ // Central device preview wrapper – this gives the exact "Figma prototype" viewing experience
+ function DeviceFrame({ children }: { children: React.ReactNode }) {
+   const navigate = useNavigate();
+   const location = useLocation();
+   const canGoBack = location.pathname !== '/' && location.pathname !== '/splash';
+ 
++  // Main tabs get the persistent bottom tab bar (rendered here for reliability + smooth tab switches)
++  const mainTabPaths = ['/home', '/destination', '/favorites', '/activity', '/profile'];
++  const isMainTab = mainTabPaths.some((p) => location.pathname.startsWith(p));
++
+   return (
+     <div className="min-h-screen bg-[#111113] flex items-center justify-center p-8">
+       <div className="device-frame">
+@@ -41,6 +95,9 @@ function DeviceFrame({ children }: { children: React.ReactNode }) {
+           {/* Main content area with safe area + transitions */}
+           <div className="relative h-[calc(100%-44px-34px)] overflow-hidden">
+             <AnimatePresence mode="wait">{children}</AnimatePresence>
++            {/* Tab bar rendered at this level (inside content viewport) so it is reliably present,
++                does not participate in page transition animations, and stays fixed during tab switches. */}
++            {isMainTab && <MainTabBar />}
+           </div>
+ 
+           {/* Bottom home indicator area (visual only) */}
+@@ -80,55 +137,6 @@ function DeviceFrame({ children }: { children: React.ReactNode }) {
+   );
+ }
+ 
+-// Bottom tab bar with premium spring-animated sliding pill indicator
+-export function MainTabBar() {
+-  const location = useLocation();
+-  const navigate = useNavigate();
+-  const tabs = [
+-    { path: '/home', label: 'Home', icon: Home },
+-    { path: '/destination', label: 'Explore', icon: MapPin },
+-    { path: '/favorites', label: 'Favorites', icon: Heart },
+-    { path: '/activity', label: 'Activity', icon: Clock },
+-    { path: '/profile', label: 'Profile', icon: User },
+-  ];
+-
+-  const active = tabs.findIndex((t) => location.pathname.startsWith(t.path));
+-  const activeSafe = active === -1 ? 0 : active;
+-  const pillLeft = `${(activeSafe / tabs.length) * 100}%`;
+-  const pillWidth = `${(1 / tabs.length) * 100}%`;
+-
+-  return (
+-    <div className="tab-bar absolute bottom-0 left-0 right-0 h-14 flex items-center justify-around z-50 border-t border-[#E5E5EA] bg-white/95 backdrop-blur-xl">
+-      {/* Sliding active pill - spring animated for premium feel */}
+-      <motion.div
+-        className="absolute top-1 bottom-1 bg-[#0A7CFF]/10 rounded-2xl z-0"
+-        style={{ left: pillLeft, width: pillWidth }}
+-        transition={{ type: 'spring', stiffness: 420, damping: 32, mass: 0.7 }}
+-        layoutId="tab-active-pill"
+-      />
+-
+-      {tabs.map((tab, idx) => {
+-        const Icon = tab.icon;
+-        const isActive = idx === active;
+-        return (
+-          <button
+-            key={tab.path}
+-            type="button"
+-            onClick={() => {
+-              if (navigator.vibrate) navigator.vibrate(6);
+-              navigate(tab.path);
+-            }}
+-            className={`relative flex flex-col items-center justify-center text-xs z-10 transition-colors ${isActive ? 'text-[#0A7CFF]' : 'text-[#8E8E93]'}`}
+-          >
+-            <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+-            <span className="mt-px">{tab.label}</span>
+-          </button>
+-        );
+-      })}
+-    </div>
+-  );
+-}
+-
+ // Root layout
+ export default function App() {
+   const location = useLocation();
+@@ -163,7 +171,6 @@ export default function App() {
+               className="screen bg-[#F8F9FA]"
+             >
+               <HomeScreen />
+-              <MainTabBar />
+             </motion.div>
+           }
+         />
+@@ -180,7 +187,6 @@ export default function App() {
+               className="screen bg-white"
+             >
+               <DestinationScreen />
+-              <MainTabBar />
+             </motion.div>
+           }
+         />
+@@ -245,7 +251,6 @@ export default function App() {
+               className="screen bg-[#F8F9FA]"
+             >
+               <FavoritesScreen />
+-              <MainTabBar />
+             </motion.div>
+           }
+         />
+@@ -263,7 +268,6 @@ export default function App() {
+               className="screen bg-[#F8F9FA]"
+             >
+               <ActivityScreen />
+-              <MainTabBar />
+             </motion.div>
+           }
+         />
+@@ -280,7 +284,6 @@ export default function App() {
+               className="screen bg-[#F8F9FA]"
+             >
+               <ProfileScreen />
+-              <MainTabBar />
+             </motion.div>
+           }
+         />
+diff --git a/src/screens/ActivityScreen.tsx b/src/screens/ActivityScreen.tsx
+index 465eb0c..5e78b7c 100644
+--- a/src/screens/ActivityScreen.tsx
++++ b/src/screens/ActivityScreen.tsx
+@@ -48,8 +48,9 @@ export function ActivityScreen() {
+             Complete your first booking and it will appear here. All rides are saved locally.
+           </p>
+           <button
++            type="button"
+             onClick={() => navigate('/home')}
+-            className="mt-6 text-sm px-5 py-2.5 rounded-2xl bg-white border border-[#E5E5EA] active:bg-zinc-50 font-medium text-[#0A7CFF]"
++            className="mt-6 text-sm px-5 py-2.5 rounded-2xl bg-white border border-[#E5E5EA] active:bg-zinc-50 active:scale-[0.985] transition-all font-medium text-[#0A7CFF]"
+           >
+             Start your first ride
+           </button>
+diff --git a/src/screens/AddPlaceScreen.tsx b/src/screens/AddPlaceScreen.tsx
+index fa04b0d..8f57592 100644
+--- a/src/screens/AddPlaceScreen.tsx
++++ b/src/screens/AddPlaceScreen.tsx
+@@ -74,7 +74,7 @@ export function AddPlaceScreen() {
+         Save place
+       </button>
+ 
+-      <button onClick={() => navigate(-1)} className="w-full mt-3 text-sm text-[#8f9bb3]">
++      <button onClick={() => navigate(-1)} className="w-full mt-3 text-sm text-[#8f9bb3] active:opacity-70 transition-opacity py-1">
+         Cancel
+       </button>
+     </div>
+diff --git a/src/screens/FavoritesScreen.tsx b/src/screens/FavoritesScreen.tsx
+index 72e41f1..25b3836 100644
+--- a/src/screens/FavoritesScreen.tsx
++++ b/src/screens/FavoritesScreen.tsx
+@@ -55,8 +55,9 @@ export function FavoritesScreen() {
+           </div>
+         </div>
+         <button
++          type="button"
+           onClick={() => navigate('/add-place')}
+-          className="flex items-center gap-1 text-[#41d5fb] text-sm font-semibold active:opacity-70"
++          className="flex items-center gap-1 text-[#41d5fb] text-sm font-semibold active:opacity-70 active:scale-[0.98] transition-all"
+         >
+           <Plus size={16} /> Add
+         </button>
+@@ -116,8 +117,9 @@ export function FavoritesScreen() {
+       {favorites.length > 0 && (
+         <div className="px-4 mt-8">
+           <button
++            type="button"
+             onClick={() => navigate('/add-place')}
+-            className="w-full flex items-center justify-center gap-2 text-[#41d5fb] text-sm font-medium py-3 border border-dashed border-[#41d5fb]/40 rounded-[12px] active:bg-white/70"
++            className="w-full flex items-center justify-center gap-2 text-[#41d5fb] text-sm font-medium py-3 border border-dashed border-[#41d5fb]/40 rounded-[12px] active:bg-white/70 active:scale-[0.985] transition-all"
+           >
+             <Plus size={16} /> Add new place (Figma screen 13)
+           </button>
+diff --git a/src/screens/HomeScreen.tsx b/src/screens/HomeScreen.tsx
+index ecc4a33..c3efa49 100644
+--- a/src/screens/HomeScreen.tsx
++++ b/src/screens/HomeScreen.tsx
+@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
+ 
+ export function HomeScreen() {
+   const navigate = useNavigate();
+-  const { user, booking, updateBooking, activeRide } = useAppStore();
++  const { user, booking, updateBooking, activeRide, rideHistory } = useAppStore();
+ 
+   const quickActions = [
+     { label: 'Set destination', icon: MapPin, action: () => navigate('/destination') },
+@@ -105,7 +105,7 @@ export function HomeScreen() {
+                 type="button"
+                 key={i}
+                 onClick={qa.action}
+-                className="flex-1 bg-white border border-[#E5E5EA] active:bg-zinc-50 rounded-2xl p-4 flex flex-col items-start text-left"
++                className="flex-1 bg-white border border-[#E5E5EA] active:bg-zinc-50 active:scale-[0.985] transition-all rounded-2xl p-4 flex flex-col items-start text-left"
+               >
+                 <Icon size={22} className="text-[#0A7CFF] mb-3" />
+                 <div className="font-medium text-sm leading-tight">{qa.label}</div>
+@@ -119,7 +119,7 @@ export function HomeScreen() {
+       <div className="px-4 mt-6">
+         <div className="flex items-center justify-between mb-2 px-1">
+           <div className="text-xs uppercase tracking-[1px] text-[#8E8E93]">SUGGESTED FOR YOU</div>
+-          <button onClick={() => navigate('/destination')} className="text-xs text-[#0A7CFF]">
++          <button onClick={() => navigate('/destination')} className="text-xs text-[#0A7CFF] active:opacity-70 transition-opacity">
+             See all
+           </button>
+         </div>
+@@ -138,9 +138,19 @@ export function HomeScreen() {
+         </div>
+       </div>
+ 
+-      {/* Recent activity teaser */}
+-      <div className="px-4 mt-8 pb-4 text-xs text-[#8E8E93]">
+-        Last ride • Downtown → Airport • 2 days ago
++      {/* Recent activity teaser — now fully store-backed for cross-flow accuracy */}
++      <div className="px-4 mt-8 pb-4">
++        {rideHistory.length > 0 ? (
++          <button
++            type="button"
++            onClick={() => navigate('/activity')}
++            className="w-full text-left text-xs text-[#8E8E93] active:text-[#0A7CFF] active:scale-[0.985] transition-all"
++          >
++            Last ride • {rideHistory[0].from} → {rideHistory[0].to} • {rideHistory[0].date.split(' • ')[0]}
++          </button>
++        ) : (
++          <div className="text-xs text-[#8E8E93]">No recent rides yet — book one to see it here</div>
++        )}
+       </div>
+     </div>
+   );
+diff --git a/src/screens/ProfileScreen.tsx b/src/screens/ProfileScreen.tsx
+index 9582054..2ca6f23 100644
+--- a/src/screens/ProfileScreen.tsx
++++ b/src/screens/ProfileScreen.tsx
+@@ -54,7 +54,7 @@ export function ProfileScreen() {
+             <button
+               key={i}
+               onClick={item.action}
+-              className="w-full px-5 py-4 text-left flex justify-between items-center active:bg-zinc-50 border-b last:border-b-0 border-[#E5E5EA] text-[15px]"
++              className="w-full px-5 py-4 text-left flex justify-between items-center active:bg-zinc-50 active:scale-[0.995] transition-all border-b last:border-b-0 border-[#E5E5EA] text-[15px]"
+             >
+               <span>{item.label}</span>
+               <span className="text-[#8E8E93]">›</span>
+@@ -67,7 +67,7 @@ export function ProfileScreen() {
+             logout();
+             navigate('/');
+           }}
+-          className="mt-8 w-full py-3.5 text-[#FF3B30] font-semibold active:bg-red-50 rounded-2xl border border-[#FF3B30]/20"
++          className="mt-8 w-full py-3.5 text-[#FF3B30] font-semibold active:bg-red-50 active:scale-[0.985] transition-all rounded-2xl border border-[#FF3B30]/20"
+         >
+           Log Out
+         </button>

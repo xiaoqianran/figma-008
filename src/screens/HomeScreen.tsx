@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export function HomeScreen() {
   const navigate = useNavigate();
-  const { user, booking, updateBooking, activeRide } = useAppStore();
+  const { user, booking, updateBooking, activeRide, rideHistory } = useAppStore();
 
   const quickActions = [
     { label: 'Set destination', icon: MapPin, action: () => navigate('/destination') },
@@ -105,7 +105,7 @@ export function HomeScreen() {
                 type="button"
                 key={i}
                 onClick={qa.action}
-                className="flex-1 bg-white border border-[#E5E5EA] active:bg-zinc-50 rounded-2xl p-4 flex flex-col items-start text-left"
+                className="flex-1 bg-white border border-[#E5E5EA] active:bg-zinc-50 active:scale-[0.985] transition-all rounded-2xl p-4 flex flex-col items-start text-left"
               >
                 <Icon size={22} className="text-[#0A7CFF] mb-3" />
                 <div className="font-medium text-sm leading-tight">{qa.label}</div>
@@ -119,7 +119,7 @@ export function HomeScreen() {
       <div className="px-4 mt-6">
         <div className="flex items-center justify-between mb-2 px-1">
           <div className="text-xs uppercase tracking-[1px] text-[#8E8E93]">SUGGESTED FOR YOU</div>
-          <button onClick={() => navigate('/destination')} className="text-xs text-[#0A7CFF]">
+          <button onClick={() => navigate('/destination')} className="text-xs text-[#0A7CFF] active:opacity-70 transition-opacity">
             See all
           </button>
         </div>
@@ -138,9 +138,19 @@ export function HomeScreen() {
         </div>
       </div>
 
-      {/* Recent activity teaser */}
-      <div className="px-4 mt-8 pb-4 text-xs text-[#8E8E93]">
-        Last ride • Downtown → Airport • 2 days ago
+      {/* Recent activity teaser — now fully store-backed for cross-flow accuracy */}
+      <div className="px-4 mt-8 pb-4">
+        {rideHistory.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => navigate('/activity')}
+            className="w-full text-left text-xs text-[#8E8E93] active:text-[#0A7CFF] active:scale-[0.985] transition-all"
+          >
+            Last ride • {rideHistory[0].from} → {rideHistory[0].to} • {rideHistory[0].date.split(' • ')[0]}
+          </button>
+        ) : (
+          <div className="text-xs text-[#8E8E93]">No recent rides yet — book one to see it here</div>
+        )}
       </div>
     </div>
   );

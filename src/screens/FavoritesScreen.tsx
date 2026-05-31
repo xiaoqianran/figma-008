@@ -55,8 +55,9 @@ export function FavoritesScreen() {
           </div>
         </div>
         <button
+          type="button"
           onClick={() => navigate('/add-place')}
-          className="flex items-center gap-1 text-[#41d5fb] text-sm font-semibold active:opacity-70"
+          className="flex items-center gap-1 text-[#41d5fb] text-sm font-semibold active:opacity-70 active:scale-[0.98] transition-all"
         >
           <Plus size={16} /> Add
         </button>
@@ -116,8 +117,9 @@ export function FavoritesScreen() {
       {favorites.length > 0 && (
         <div className="px-4 mt-8">
           <button
+            type="button"
             onClick={() => navigate('/add-place')}
-            className="w-full flex items-center justify-center gap-2 text-[#41d5fb] text-sm font-medium py-3 border border-dashed border-[#41d5fb]/40 rounded-[12px] active:bg-white/70"
+            className="w-full flex items-center justify-center gap-2 text-[#41d5fb] text-sm font-medium py-3 border border-dashed border-[#41d5fb]/40 rounded-[12px] active:bg-white/70 active:scale-[0.985] transition-all"
           >
             <Plus size={16} /> Add new place (Figma screen 13)
           </button>

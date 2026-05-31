@@ -18,69 +18,8 @@ import { SplashScreen } from './screens/SplashScreen';
 import { VerifyPhoneScreen } from './screens/VerifyPhoneScreen';
 import { useAppStore } from './stores/useAppStore';
 
-// Central device preview wrapper – this gives the exact "Figma prototype" viewing experience
-function DeviceFrame({ children }: { children: React.ReactNode }) {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const canGoBack = location.pathname !== '/' && location.pathname !== '/splash';
-
-  return (
-    <div className="min-h-screen bg-[#111113] flex items-center justify-center p-8">
-      <div className="device-frame">
-        <div className="app-viewport bg-[#F8F9FA] relative overflow-hidden">
-          {/* Top status bar (iOS style - black on light screens) */}
-          <div className="status-bar text-black z-50 relative">
-            <div>9:41</div>
-            <div className="flex items-center gap-1 text-[12px]">
-              <span>100%</span>
-              {/* Simple signal + wifi + battery icons via text for now */}
-              <span>●●●</span>
-            </div>
-          </div>
-
-          {/* Main content area with safe area + transitions */}
-          <div className="relative h-[calc(100%-44px-34px)] overflow-hidden">
-            <AnimatePresence mode="wait">{children}</AnimatePresence>
-          </div>
-
-          {/* Bottom home indicator area (visual only) */}
-          <div className="h-[34px] flex items-end justify-center pb-2 z-50">
-            <div className="w-[134px] h-1 bg-black/80 rounded-full" />
-          </div>
-
-          {/* Dev helper: back button overlay when not on splash */}
-          {canGoBack && (
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="absolute top-[60px] left-4 z-[100] bg-white/90 backdrop-blur rounded-full p-2 shadow-md active:scale-95"
-              aria-label="Go back"
-            >
-              <ChevronLeft size={20} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Desktop info panel */}
-      <div className="ml-8 max-w-xs hidden lg:block text-white/70 text-sm leading-relaxed">
-        <div className="font-semibold text-white mb-2 text-base">CARGO Figma Replica</div>
-        <p>
-          Exact 1:1 replication of the "CARGO - Car Booking &amp; Sharing App" design system from
-          Figma.
-        </p>
-        <p className="mt-3 text-xs opacity-60">
-          375×812 • iPhone X frame • All flows interactive • PWA ready
-        </p>
-        <div className="mt-6 text-[10px] font-mono opacity-50">
-          Press F12 → Toggle device toolbar for real mobile test
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // Bottom tab bar with premium spring-animated sliding pill indicator
+// (Rendered from DeviceFrame for all 5 main tabs to guarantee presence + non-animating during switches)
 export function MainTabBar() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -129,6 +68,75 @@ export function MainTabBar() {
   );
 }
 
+// Central device preview wrapper – this gives the exact "Figma prototype" viewing experience
+function DeviceFrame({ children }: { children: React.ReactNode }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const canGoBack = location.pathname !== '/' && location.pathname !== '/splash';
+
+  // Main tabs get the persistent bottom tab bar (rendered here for reliability + smooth tab switches)
+  const mainTabPaths = ['/home', '/destination', '/favorites', '/activity', '/profile'];
+  const isMainTab = mainTabPaths.some((p) => location.pathname.startsWith(p));
+
+  return (
+    <div className="min-h-screen bg-[#111113] flex items-center justify-center p-8">
+      <div className="device-frame">
+        <div className="app-viewport bg-[#F8F9FA] relative overflow-hidden">
+          {/* Top status bar (iOS style - black on light screens) */}
+          <div className="status-bar text-black z-50 relative">
+            <div>9:41</div>
+            <div className="flex items-center gap-1 text-[12px]">
+              <span>100%</span>
+              {/* Simple signal + wifi + battery icons via text for now */}
+              <span>●●●</span>
+            </div>
+          </div>
+
+          {/* Main content area with safe area + transitions */}
+          <div className="relative h-[calc(100%-44px-34px)] overflow-hidden">
+            <AnimatePresence mode="wait">{children}</AnimatePresence>
+            {/* Tab bar rendered at this level (inside content viewport) so it is reliably present,
+                does not participate in page transition animations, and stays fixed during tab switches. */}
+            {isMainTab && <MainTabBar />}
+          </div>
+
+          {/* Bottom home indicator area (visual only) */}
+          <div className="h-[34px] flex items-end justify-center pb-2 z-50">
+            <div className="w-[134px] h-1 bg-black/80 rounded-full" />
+          </div>
+
+          {/* Dev helper: back button overlay when not on splash */}
+          {canGoBack && (
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="absolute top-[60px] left-4 z-[100] bg-white/90 backdrop-blur rounded-full p-2 shadow-md active:scale-95"
+              aria-label="Go back"
+            >
+              <ChevronLeft size={20} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop info panel */}
+      <div className="ml-8 max-w-xs hidden lg:block text-white/70 text-sm leading-relaxed">
+        <div className="font-semibold text-white mb-2 text-base">CARGO Figma Replica</div>
+        <p>
+          Exact 1:1 replication of the "CARGO - Car Booking &amp; Sharing App" design system from
+          Figma.
+        </p>
+        <p className="mt-3 text-xs opacity-60">
+          375×812 • iPhone X frame • All flows interactive • PWA ready
+        </p>
+        <div className="mt-6 text-[10px] font-mono opacity-50">
+          Press F12 → Toggle device toolbar for real mobile test
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Root layout
 export default function App() {
   const location = useLocation();
@@ -163,7 +171,6 @@ export default function App() {
               className="screen bg-[#F8F9FA]"
             >
               <HomeScreen />
-              <MainTabBar />
             </motion.div>
           }
         />
@@ -180,7 +187,6 @@ export default function App() {
               className="screen bg-white"
             >
               <DestinationScreen />
-              <MainTabBar />
             </motion.div>
           }
         />
@@ -245,7 +251,6 @@ export default function App() {
               className="screen bg-[#F8F9FA]"
             >
               <FavoritesScreen />
-              <MainTabBar />
             </motion.div>
           }
         />
@@ -263,7 +268,6 @@ export default function App() {
               className="screen bg-[#F8F9FA]"
             >
               <ActivityScreen />
-              <MainTabBar />
             </motion.div>
           }
         />
@@ -280,7 +284,6 @@ export default function App() {
               className="screen bg-[#F8F9FA]"
             >
               <ProfileScreen />
-              <MainTabBar />
             </motion.div>
           }
         />

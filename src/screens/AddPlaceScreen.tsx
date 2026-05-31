@@ -74,7 +74,7 @@ export function AddPlaceScreen() {
         Save place
       </button>
 
-      <button onClick={() => navigate(-1)} className="w-full mt-3 text-sm text-[#8f9bb3]">
+      <button onClick={() => navigate(-1)} className="w-full mt-3 text-sm text-[#8f9bb3] active:opacity-70 transition-opacity py-1">
         Cancel
       </button>
     </div>

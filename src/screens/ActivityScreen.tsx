@@ -48,8 +48,9 @@ export function ActivityScreen() {
             Complete your first booking and it will appear here. All rides are saved locally.
           </p>
           <button
+            type="button"
             onClick={() => navigate('/home')}
-            className="mt-6 text-sm px-5 py-2.5 rounded-2xl bg-white border border-[#E5E5EA] active:bg-zinc-50 font-medium text-[#0A7CFF]"
+            className="mt-6 text-sm px-5 py-2.5 rounded-2xl bg-white border border-[#E5E5EA] active:bg-zinc-50 active:scale-[0.985] transition-all font-medium text-[#0A7CFF]"
           >
             Start your first ride
           </button>
