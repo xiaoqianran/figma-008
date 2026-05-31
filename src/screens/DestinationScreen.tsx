@@ -1,7 +1,7 @@
-import React, { Suspense } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAppStore } from '../stores/useAppStore'
-import type { LatLng } from '../components/maps/geocode'
+import React, { Suspense } from 'react';
+import { useNavigate } from 'react-router-dom';
+import type { LatLng } from '../components/maps/geocode';
+import { useAppStore } from '../stores/useAppStore';
 
 /**
  * Production DestinationScreen — now a full interactive MapLibre destination picker.
@@ -21,25 +21,25 @@ import type { LatLng } from '../components/maps/geocode'
 // Lazy load the map implementation (critical for initial bundle + perf)
 const MapView = React.lazy(() =>
   import('../components/maps/MapView').then((m) => ({ default: m.MapView }))
-)
+);
 
 export function DestinationScreen() {
-  const navigate = useNavigate()
-  const { booking, updateBooking } = useAppStore()
+  const navigate = useNavigate();
+  const { booking, updateBooking } = useAppStore();
 
   // Pass any previously chosen coords (supports coming back in flow)
-  const initialDest = booking.destinationCoords
-  const initialPickup = booking.pickupCoords
+  const initialDest = booking.destinationCoords;
+  const initialPickup = booking.pickupCoords;
 
   const handleConfirmDestination = (address: string, coords: LatLng, estimatedPrice: number) => {
     updateBooking({
       destinationLocation: address,
       destinationCoords: coords,
       estimatedPrice,
-    })
+    });
     // Exactly matches the original flow requirement
-    navigate('/service')
-  }
+    navigate('/service');
+  };
 
   return (
     <div className="screen flex flex-col bg-white text-black overflow-hidden">
@@ -67,9 +67,10 @@ export function DestinationScreen() {
       {/* Subtle pickup reminder bar (visible above tab bar when map is shown) */}
       <div className="absolute bottom-[58px] left-0 right-0 z-[45] px-3 pointer-events-none">
         <div className="pointer-events-auto mx-auto max-w-[320px] text-[10px] bg-white/90 backdrop-blur border border-[#E5E5EA] rounded-full px-3 py-1 text-center text-[#6C6C6E] shadow-sm">
-          Pickup: <span className="font-medium text-black">{booking.pickupLocation}</span> • {booking.pickupTime}
+          Pickup: <span className="font-medium text-black">{booking.pickupLocation}</span> •{' '}
+          {booking.pickupTime}
         </div>
       </div>
     </div>
-  )
+  );
 }

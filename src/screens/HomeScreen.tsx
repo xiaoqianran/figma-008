@@ -1,18 +1,22 @@
-import { useNavigate } from 'react-router-dom'
-import { MapPin, Clock, ArrowRight } from 'lucide-react'
-import { useAppStore } from '../stores/useAppStore'
+import { ArrowRight, Clock, MapPin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAppStore } from '../stores/useAppStore';
 
 export function HomeScreen() {
-  const navigate = useNavigate()
-  const { user, booking, updateBooking } = useAppStore()
+  const navigate = useNavigate();
+  const { user, booking, updateBooking } = useAppStore();
 
   const quickActions = [
     { label: 'Set destination', icon: MapPin, action: () => navigate('/destination') },
-    { label: 'Schedule later', icon: Clock, action: () => {
-      updateBooking({ pickupTime: 'Tomorrow 09:15' })
-      navigate('/destination')
-    }},
-  ]
+    {
+      label: 'Schedule later',
+      icon: Clock,
+      action: () => {
+        updateBooking({ pickupTime: 'Tomorrow 09:15' });
+        navigate('/destination');
+      },
+    },
+  ];
 
   return (
     <div className="screen overflow-y-auto pb-20 bg-[#F8F9FA] text-black">
@@ -21,7 +25,9 @@ export function HomeScreen() {
         <div className="flex items-center justify-between">
           <div>
             <div className="text-xs text-[#8E8E93]">Good morning</div>
-            <div className="text-2xl font-semibold tracking-[-0.5px]">{user?.name?.split(' ')[0] || 'Rider'}</div>
+            <div className="text-2xl font-semibold tracking-[-0.5px]">
+              {user?.name?.split(' ')[0] || 'Rider'}
+            </div>
           </div>
           <div className="w-9 h-9 bg-zinc-200 rounded-full overflow-hidden ring-2 ring-white">
             {/* Avatar placeholder */}
@@ -36,13 +42,13 @@ export function HomeScreen() {
       <div className="mx-4 mt-3 rounded-2xl overflow-hidden border border-[#E5E5EA] bg-white shadow-sm h-[260px] relative">
         {/* Placeholder for real MapLibre – high visual fidelity for now */}
         <div className="absolute inset-0 bg-[linear-gradient(#e5e7eb_1px,transparent_1px)] bg-[length:28px_28px] opacity-60" />
-        
+
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
           <div className="text-5xl mb-3 opacity-90">🗺️</div>
           <div className="font-semibold text-lg">Your location</div>
           <div className="text-sm text-[#6C6C6E] mt-0.5">{booking.pickupLocation}</div>
-          
-          <button 
+
+          <button
             onClick={() => navigate('/destination')}
             className="mt-6 btn btn-primary px-8 text-sm font-semibold shadow-md"
           >
@@ -61,9 +67,9 @@ export function HomeScreen() {
         <div className="text-xs uppercase tracking-[1px] text-[#8E8E93] mb-2 pl-1">QUICK BOOK</div>
         <div className="flex gap-3">
           {quickActions.map((qa, i) => {
-            const Icon = qa.icon
+            const Icon = qa.icon;
             return (
-              <button 
+              <button
                 key={i}
                 onClick={qa.action}
                 className="flex-1 bg-white border border-[#E5E5EA] active:bg-zinc-50 rounded-2xl p-4 flex flex-col items-start text-left"
@@ -71,7 +77,7 @@ export function HomeScreen() {
                 <Icon size={22} className="text-[#0A7CFF] mb-3" />
                 <div className="font-medium text-sm leading-tight">{qa.label}</div>
               </button>
-            )
+            );
           })}
         </div>
       </div>
@@ -80,10 +86,15 @@ export function HomeScreen() {
       <div className="px-4 mt-6">
         <div className="flex items-center justify-between mb-2 px-1">
           <div className="text-xs uppercase tracking-[1px] text-[#8E8E93]">SUGGESTED FOR YOU</div>
-          <button onClick={() => navigate('/destination')} className="text-xs text-[#0A7CFF]">See all</button>
+          <button onClick={() => navigate('/destination')} className="text-xs text-[#0A7CFF]">
+            See all
+          </button>
         </div>
 
-        <div onClick={() => navigate('/destination')} className="ride-card card p-4 flex gap-4 active:scale-[0.985] cursor-pointer">
+        <div
+          onClick={() => navigate('/destination')}
+          className="ride-card card p-4 flex gap-4 active:scale-[0.985] cursor-pointer"
+        >
           <div className="w-16 h-16 bg-zinc-100 rounded-xl flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="font-semibold">Economy • 4 min away</div>
@@ -99,5 +110,5 @@ export function HomeScreen() {
         Last ride • Downtown → Airport • 2 days ago
       </div>
     </div>
-  )
+  );
 }

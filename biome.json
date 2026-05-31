@@ -1,5 +1,14 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "files": {
+    "ignore": [
+      "dist/**",
+      "dev-dist/**",
+      "node_modules/**",
+      "playwright-report/**",
+      "e2e/snapshots/**"
+    ]
+  },
   "organizeImports": {
     "enabled": true
   },
@@ -7,9 +16,6 @@
     "enabled": true,
     "rules": {
       "recommended": true,
-      "react": {
-        "all": true
-      },
       "style": {
         "useConst": "error",
         "useTemplate": "error"

@@ -1,26 +1,26 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAppStore } from '../stores/useAppStore'
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAppStore } from '../stores/useAppStore';
 
 export function SignUpScreen() {
-  const navigate = useNavigate()
-  const { setUser } = useAppStore()
-  const [phone, setPhone] = useState('+1 (555) 123-4567')
-  const [name, setName] = useState('Alex Rivera')
-  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate();
+  const { setUser } = useAppStore();
+  const [phone, setPhone] = useState('+1 (555) 123-4567');
+  const [name, setName] = useState('Alex Rivera');
+  const [loading, setLoading] = useState(false);
 
   const handleSignUp = async () => {
-    setLoading(true)
+    setLoading(true);
     // Simulate network + OTP step
-    await new Promise(r => setTimeout(r, 650))
-    
+    await new Promise((r) => setTimeout(r, 650));
+
     setUser({
       id: 'u_' + Date.now(),
       name,
       phone,
-    })
-    navigate('/verify')
-  }
+    });
+    navigate('/verify');
+  };
 
   return (
     <div className="screen overflow-y-auto bg-white px-4 pb-12 text-black">
@@ -28,13 +28,17 @@ export function SignUpScreen() {
 
       <div className="pt-12">
         <div className="text-[28px] leading-none font-semibold tracking-[-1px]">Create account</div>
-        <p className="mt-2 text-[#6C6C6E] text-[15px]">Join the largest car sharing network in the city.</p>
+        <p className="mt-2 text-[#6C6C6E] text-[15px]">
+          Join the largest car sharing network in the city.
+        </p>
       </div>
 
       <div className="mt-8 space-y-4">
         {/* Name */}
         <div>
-          <div className="text-xs uppercase tracking-widest text-[#8E8E93] mb-1.5 pl-1">FULL NAME</div>
+          <div className="text-xs uppercase tracking-widest text-[#8E8E93] mb-1.5 pl-1">
+            FULL NAME
+          </div>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -45,7 +49,9 @@ export function SignUpScreen() {
 
         {/* Phone (Figma style) */}
         <div>
-          <div className="text-xs uppercase tracking-widest text-[#8E8E93] mb-1.5 pl-1">PHONE NUMBER</div>
+          <div className="text-xs uppercase tracking-widest text-[#8E8E93] mb-1.5 pl-1">
+            PHONE NUMBER
+          </div>
           <input
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
@@ -55,7 +61,7 @@ export function SignUpScreen() {
         </div>
 
         {/* Country picker hint (matches Figma screen 4) */}
-        <button 
+        <button
           onClick={() => alert('Country picker would open here (screen 4 in Figma)')}
           className="text-xs text-[#0A7CFF] flex items-center gap-1 active:opacity-60"
         >
@@ -64,8 +70,8 @@ export function SignUpScreen() {
       </div>
 
       <div className="mt-8">
-        <button 
-          onClick={handleSignUp} 
+        <button
+          onClick={handleSignUp}
           disabled={loading || !name || !phone}
           className="btn btn-primary w-full text-[17px] font-semibold disabled:opacity-60"
         >
@@ -86,11 +92,12 @@ export function SignUpScreen() {
       </div>
 
       <div className="mt-8 text-center text-xs text-[#8E8E93]">
-        By continuing you agree to our <span className="text-[#0A7CFF]">Terms</span> &amp; <span className="text-[#0A7CFF]">Privacy</span>.
+        By continuing you agree to our <span className="text-[#0A7CFF]">Terms</span> &amp;{' '}
+        <span className="text-[#0A7CFF]">Privacy</span>.
       </div>
 
       <div className="mt-6 text-center">
-        <button 
+        <button
           onClick={() => navigate('/login')}
           className="text-[#0A7CFF] text-sm font-medium active:underline"
         >
@@ -98,5 +105,5 @@ export function SignUpScreen() {
         </button>
       </div>
     </div>
-  )
+  );
 }

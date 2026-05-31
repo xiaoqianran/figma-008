@@ -1,5 +1,5 @@
-import { useAppStore } from '../stores/useAppStore'
-import { Clock, Star } from 'lucide-react'
+import { Clock, Star } from 'lucide-react';
+import { useAppStore } from '../stores/useAppStore';
 
 /**
  * Activity / Ride History screen
@@ -7,7 +7,7 @@ import { Clock, Star } from 'lucide-react'
  * Matches the spirit of Figma history cards (screen 16 had promo history style).
  */
 export function ActivityScreen() {
-  const { rideHistory } = useAppStore()
+  const { rideHistory } = useAppStore();
 
   return (
     <div className="screen overflow-y-auto bg-[#F8F9FA] pb-20 text-black">
@@ -33,7 +33,9 @@ export function ActivityScreen() {
                   <div className="font-semibold">{ride.from}</div>
                   <div className="text-[#6C6C6E] mt-0.5">→ {ride.to}</div>
                 </div>
-                <div className="text-right tabular-nums font-semibold">${ride.price.toFixed(2)}</div>
+                <div className="text-right tabular-nums font-semibold">
+                  ${ride.price.toFixed(2)}
+                </div>
               </div>
 
               <div className="flex items-center justify-between mt-4 text-xs text-[#8E8E93]">
@@ -49,5 +51,5 @@ export function ActivityScreen() {
         </div>
       )}
     </div>
-  )
+  );
 }

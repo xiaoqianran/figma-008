@@ -1,7 +1,7 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
-import { VitePWA } from 'vite-plugin-pwa'
+import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   // Important for GitHub Pages deployment (https://<user>.github.io/figma-008/)
@@ -24,7 +24,8 @@ export default defineConfig({
       manifest: {
         name: 'CARGO - Car Booking & Sharing',
         short_name: 'CARGO',
-        description: 'Book cars instantly. High-fidelity replica of the official Figma design system.',
+        description:
+          'Book cars instantly. High-fidelity replica of the official Figma design system.',
         theme_color: '#0F172A',
         background_color: '#0F172A',
         display: 'standalone',
@@ -84,4 +85,4 @@ export default defineConfig({
       },
     },
   },
-})
+});

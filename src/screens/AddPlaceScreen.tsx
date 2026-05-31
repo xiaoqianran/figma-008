@@ -1,22 +1,22 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { MapPin } from 'lucide-react'
+import { MapPin } from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * Figma screen 13: Add new place
  * Form + map teaser, exact input heights and 12px radius from spec.
  */
 export function AddPlaceScreen() {
-  const navigate = useNavigate()
-  const [name, setName] = useState('')
-  const [address, setAddress] = useState('')
+  const navigate = useNavigate();
+  const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
 
   const handleSave = () => {
-    if (!name || !address) return
+    if (!name || !address) return;
     // In real app this would persist to a places store
-    alert(`Saved "${name}" — will appear in Favorites (demo only)`)
-    navigate('/favorites')
-  }
+    alert(`Saved "${name}" — will appear in Favorites (demo only)`);
+    navigate('/favorites');
+  };
 
   return (
     <div className="screen overflow-y-auto bg-white px-4 pb-8 text-[#222b45]">
@@ -27,7 +27,9 @@ export function AddPlaceScreen() {
 
       <div className="mt-6 space-y-5">
         <div>
-          <div className="text-xs uppercase tracking-[1px] text-[#8f9bb3] mb-1.5 pl-0.5">PLACE NAME</div>
+          <div className="text-xs uppercase tracking-[1px] text-[#8f9bb3] mb-1.5 pl-0.5">
+            PLACE NAME
+          </div>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -37,7 +39,9 @@ export function AddPlaceScreen() {
         </div>
 
         <div>
-          <div className="text-xs uppercase tracking-[1px] text-[#8f9bb3] mb-1.5 pl-0.5">ADDRESS</div>
+          <div className="text-xs uppercase tracking-[1px] text-[#8f9bb3] mb-1.5 pl-0.5">
+            ADDRESS
+          </div>
           <input
             value={address}
             onChange={(e) => setAddress(e.target.value)}
@@ -68,5 +72,5 @@ export function AddPlaceScreen() {
         Cancel
       </button>
     </div>
-  )
+  );
 }

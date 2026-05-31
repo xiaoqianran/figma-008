@@ -1,4 +1,4 @@
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test';
 
 /**
  * Playwright config for CARGO Figma replica (2026 best practices)
@@ -44,4 +44,4 @@ export default defineConfig({
 
   // Visual regression (future dedicated project)
   snapshotDir: './e2e/snapshots',
-})
+});

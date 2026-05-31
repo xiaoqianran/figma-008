@@ -1,26 +1,26 @@
-import { useNavigate } from 'react-router-dom'
-import { MapPin } from 'lucide-react'
-import { useAppStore } from '../stores/useAppStore'
+import { MapPin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAppStore } from '../stores/useAppStore';
 
 /**
  * Figma screen 8: Enable Location
  * Simple, clean permission-style screen with primary CTA.
  */
 export function EnableLocationScreen() {
-  const navigate = useNavigate()
-  const { setOnboarded } = useAppStore()
+  const navigate = useNavigate();
+  const { setOnboarded } = useAppStore();
 
   const handleEnable = () => {
     // In a real app this would call navigator.geolocation
     // For replica fidelity we just simulate success instantly
-    setOnboarded(true)
-    navigate('/home', { replace: true })
-  }
+    setOnboarded(true);
+    navigate('/home', { replace: true });
+  };
 
   const handleSkip = () => {
-    setOnboarded(true)
-    navigate('/home', { replace: true })
-  }
+    setOnboarded(true);
+    navigate('/home', { replace: true });
+  };
 
   return (
     <div className="screen flex flex-col bg-white px-4 text-black">
@@ -29,7 +29,9 @@ export function EnableLocationScreen() {
           <MapPin size={42} className="text-[#0A7CFF]" />
         </div>
 
-        <div className="text-[28px] leading-none font-semibold tracking-[-1px]">Enable location</div>
+        <div className="text-[28px] leading-none font-semibold tracking-[-1px]">
+          Enable location
+        </div>
         <p className="mt-3 max-w-[300px] text-[#6C6C6E] text-[15px]">
           We need your location to show nearby drivers and give accurate ETAs for your rides.
         </p>
@@ -51,5 +53,5 @@ export function EnableLocationScreen() {
         </button>
       </div>
     </div>
-  )
+  );
 }

@@ -1,5 +1,5 @@
-import { Heart, MapPin, Plus } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { Heart, MapPin, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * Figma screen 12: My favorites
@@ -10,10 +10,10 @@ const FAVORITES = [
   { id: 1, name: 'Home', address: '874 Hildegard Crossing', icon: '🏠' },
   { id: 2, name: 'Work', address: '27 Sawayn Square', icon: '🏢' },
   { id: 3, name: 'Gym', address: 'Mission Bay', icon: '💪' },
-]
+];
 
 export function FavoritesScreen() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   return (
     <div className="screen overflow-y-auto bg-[#F8F9FA] pb-20 text-[#222b45]">
@@ -36,7 +36,7 @@ export function FavoritesScreen() {
             key={place.id}
             onClick={() => {
               // Simulate selecting favorite → go to destination with prefilled value
-              navigate('/destination', { state: { prefill: place.address } })
+              navigate('/destination', { state: { prefill: place.address } });
             }}
             className="card flex items-center gap-4 p-4 active:bg-white border border-[#e4e9f2] rounded-[12px] cursor-pointer"
           >
@@ -65,5 +65,5 @@ export function FavoritesScreen() {
         </button>
       </div>
     </div>
-  )
+  );
 }

@@ -1,17 +1,18 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react'
-import maplibregl, { Map as MapLibreMap, Marker, LngLatLike } from 'maplibre-gl'
-import 'maplibre-gl/dist/maplibre-gl.css'
-import { MapPin, Navigation, X } from 'lucide-react'
-import { useAppStore } from '../../stores/useAppStore'
+import maplibregl, { type Map as MapLibreMap, type Marker, type LngLatLike } from 'maplibre-gl';
+import type React from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { MapPin, Navigation, X } from 'lucide-react';
+import { useAppStore } from '../../stores/useAppStore';
 import {
-  type LatLng,
-  reverseGeocode,
-  debounce,
-  SF_DEFAULT,
-  haversineMiles,
-  searchPlaces,
   type GeocodeResult,
-} from './geocode'
+  type LatLng,
+  SF_DEFAULT,
+  debounce,
+  haversineMiles,
+  reverseGeocode,
+  searchPlaces,
+} from './geocode';
 
 /**
  * Production-quality interactive MapLibre GL JS destination picker.
@@ -50,32 +51,32 @@ import {
 
 interface MapViewProps {
   /** Called when user confirms the destination in the floating panel */
-  onConfirmDestination: (address: string, coords: LatLng, estimatedPrice: number) => void
+  onConfirmDestination: (address: string, coords: LatLng, estimatedPrice: number) => void;
   /** Optional initial destination (from persisted booking) */
-  initialDestCoords?: LatLng
-  initialPickupCoords?: LatLng
+  initialDestCoords?: LatLng;
+  initialPickupCoords?: LatLng;
 }
 
-const MAP_STYLE_PRIMARY = 'https://tiles.openfreemap.org/styles/liberty/style.json'
-const MAP_STYLE_FALLBACK = 'https://demotiles.maplibre.org/style.json'
+const MAP_STYLE_PRIMARY = 'https://tiles.openfreemap.org/styles/liberty/style.json';
+const MAP_STYLE_FALLBACK = 'https://demotiles.maplibre.org/style.json';
 
-const DEFAULT_ZOOM = 13.5
-const PIN_ZOOM = 16
+const DEFAULT_ZOOM = 13.5;
+const PIN_ZOOM = 16;
 
 // Rough price model (demo only, feels realistic for SF)
 function calculateEstimatedPrice(pickup: LatLng, dest: LatLng): number {
-  const miles = haversineMiles(pickup, dest)
-  const base = 6.5
-  const perMile = 2.35
-  const surge = 1.0 // could be dynamic later
-  const price = Math.round((base + miles * perMile) * surge * 10) / 10
-  return Math.max(7, Math.min(48, price)) // clamp to realistic range
+  const miles = haversineMiles(pickup, dest);
+  const base = 6.5;
+  const perMile = 2.35;
+  const surge = 1.0; // could be dynamic later
+  const price = Math.round((base + miles * perMile) * surge * 10) / 10;
+  return Math.max(7, Math.min(48, price)); // clamp to realistic range
 }
 
 // Custom destination pin (matches Figma screen 11 aesthetic: dark flag + cyan accent)
 function createDestinationMarkerElement(): HTMLDivElement {
-  const el = document.createElement('div')
-  el.className = 'cargo-dest-pin'
+  const el = document.createElement('div');
+  el.className = 'cargo-dest-pin';
   el.innerHTML = `
     <svg width="38" height="46" viewBox="0 0 38 46" fill="none" xmlns="http://www.w3.org/2000/svg">
       <g filter="url(#shadow)">
@@ -90,106 +91,115 @@ function createDestinationMarkerElement(): HTMLDivElement {
         </filter>
       </defs>
     </svg>
-  `
-  el.style.cursor = 'grab'
-  el.style.filter = 'drop-shadow(0 3px 6px rgba(0,0,0,0.3))'
-  return el
+  `;
+  el.style.cursor = 'grab';
+  el.style.filter = 'drop-shadow(0 3px 6px rgba(0,0,0,0.3))';
+  return el;
 }
 
 // Pulsing user location marker (iOS-like blue dot + halo)
 function createUserLocationElement(): HTMLDivElement {
-  const el = document.createElement('div')
-  el.className = 'cargo-user-loc'
+  const el = document.createElement('div');
+  el.className = 'cargo-user-loc';
   el.innerHTML = `
     <div class="cargo-user-dot-outer"></div>
     <div class="cargo-user-dot"></div>
-  `
-  return el
+  `;
+  return el;
 }
 
-export function MapView({ onConfirmDestination, initialDestCoords, initialPickupCoords }: MapViewProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<MapLibreMap | null>(null)
-  const destMarkerRef = useRef<Marker | null>(null)
-  const userMarkerRef = useRef<Marker | null>(null)
-  const routeLayerId = 'cargo-route'
+export function MapView({
+  onConfirmDestination,
+  initialDestCoords,
+  initialPickupCoords,
+}: MapViewProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<MapLibreMap | null>(null);
+  const destMarkerRef = useRef<Marker | null>(null);
+  const userMarkerRef = useRef<Marker | null>(null);
+  const routeLayerId = 'cargo-route';
 
-  const [isMapLoaded, setIsMapLoaded] = useState(false)
-  const [mapError, setMapError] = useState<string | null>(null)
-  const [selectedDest, setSelectedDest] = useState<{ coords: LatLng; address: string } | null>(null)
-  const [userLocation, setUserLocation] = useState<LatLng>(initialPickupCoords || SF_DEFAULT)
-  const [isLocating, setIsLocating] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [suggestions, setSuggestions] = useState<GeocodeResult[]>([])
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false)
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
+  const [selectedDest, setSelectedDest] = useState<{ coords: LatLng; address: string } | null>(
+    null
+  );
+  const [userLocation, setUserLocation] = useState<LatLng>(initialPickupCoords || SF_DEFAULT);
+  const [isLocating, setIsLocating] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<GeocodeResult[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
 
-  const abortControllerRef = useRef<AbortController | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Store access for pickup (read-only in map for preview)
-  const { booking } = useAppStore()
+  const { booking } = useAppStore();
 
   // Current pickup coords (fallback to userLocation)
-  const pickupCoords: LatLng = booking.pickupCoords || initialPickupCoords || userLocation
+  const pickupCoords: LatLng = booking.pickupCoords || initialPickupCoords || userLocation;
 
   // Debounced reverse geocode for marker drag / tap
   const debouncedReverse = useCallback(
     debounce(async (coords: LatLng) => {
-      const ac = new AbortController()
-      abortControllerRef.current = ac
+      const ac = new AbortController();
+      abortControllerRef.current = ac;
 
-      const address = await reverseGeocode(coords, ac.signal)
+      const address = await reverseGeocode(coords, ac.signal);
       if (address) {
-        setSelectedDest({ coords, address })
+        setSelectedDest({ coords, address });
       }
     }, 420),
     []
-  )
+  );
 
   // Update or create the destination marker (draggable)
-  const updateDestMarker = useCallback((coords: LatLng, address?: string) => {
-    const map = mapRef.current
-    if (!map) return
+  const updateDestMarker = useCallback(
+    (coords: LatLng, address?: string) => {
+      const map = mapRef.current;
+      if (!map) return;
 
-    if (!destMarkerRef.current) {
-      const el = createDestinationMarkerElement()
-      const marker = new maplibregl.Marker({
-        element: el,
-        anchor: 'bottom',
-        draggable: true,
-      })
-        .setLngLat([coords.lng, coords.lat] as LngLatLike)
-        .addTo(map)
+      if (!destMarkerRef.current) {
+        const el = createDestinationMarkerElement();
+        const marker = new maplibregl.Marker({
+          element: el,
+          anchor: 'bottom',
+          draggable: true,
+        })
+          .setLngLat([coords.lng, coords.lat] as LngLatLike)
+          .addTo(map);
 
-      // Drag handling (production quality – fires on end)
-      marker.on('dragend', () => {
-        const pos = marker.getLngLat()
-        const newCoords: LatLng = { lat: pos.lat, lng: pos.lng }
-        debouncedReverse(newCoords)
-        // Keep camera following a little for premium feel
-        map.panTo([newCoords.lng, newCoords.lat], { duration: 180 })
-      })
+        // Drag handling (production quality – fires on end)
+        marker.on('dragend', () => {
+          const pos = marker.getLngLat();
+          const newCoords: LatLng = { lat: pos.lat, lng: pos.lng };
+          debouncedReverse(newCoords);
+          // Keep camera following a little for premium feel
+          map.panTo([newCoords.lng, newCoords.lat], { duration: 180 });
+        });
 
-      // Click on marker recenters nicely
-      el.addEventListener('click', (e) => {
-        e.stopPropagation()
-        map.flyTo({ center: [coords.lng, coords.lat], zoom: PIN_ZOOM, duration: 420 })
-      })
+        // Click on marker recenters nicely
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          map.flyTo({ center: [coords.lng, coords.lat], zoom: PIN_ZOOM, duration: 420 });
+        });
 
-      destMarkerRef.current = marker
-    } else {
-      destMarkerRef.current.setLngLat([coords.lng, coords.lat] as LngLatLike)
-    }
+        destMarkerRef.current = marker;
+      } else {
+        destMarkerRef.current.setLngLat([coords.lng, coords.lat] as LngLatLike);
+      }
 
-    if (address) {
-      setSelectedDest({ coords, address })
-    }
-  }, [debouncedReverse])
+      if (address) {
+        setSelectedDest({ coords, address });
+      }
+    },
+    [debouncedReverse]
+  );
 
   // Draw / update straight-line route preview layer (high value, zero cost)
   const updateRoutePreview = useCallback((pickup: LatLng, dest: LatLng) => {
-    const map = mapRef.current
-    if (!map || !map.isStyleLoaded()) return
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
 
     const geojson: GeoJSON.Feature<GeoJSON.LineString> = {
       type: 'Feature',
@@ -201,16 +211,16 @@ export function MapView({ onConfirmDestination, initialDestCoords, initialPickup
         ],
       },
       properties: {},
-    }
+    };
 
     // Remove old layer/source if exists (safe)
-    if (map.getLayer(routeLayerId)) map.removeLayer(routeLayerId)
-    if (map.getSource(routeLayerId)) map.removeSource(routeLayerId)
+    if (map.getLayer(routeLayerId)) map.removeLayer(routeLayerId);
+    if (map.getSource(routeLayerId)) map.removeSource(routeLayerId);
 
     map.addSource(routeLayerId, {
       type: 'geojson',
       data: geojson,
-    })
+    });
 
     map.addLayer({
       id: routeLayerId,
@@ -226,62 +236,65 @@ export function MapView({ onConfirmDestination, initialDestCoords, initialPickup
         'line-opacity': 0.75,
         'line-dasharray': [1.5, 1.8],
       },
-    })
-  }, [])
+    });
+  }, []);
 
   // Place / update user location marker (non-draggable, pulsing)
   const updateUserMarker = useCallback((coords: LatLng) => {
-    const map = mapRef.current
-    if (!map) return
+    const map = mapRef.current;
+    if (!map) return;
 
     if (!userMarkerRef.current) {
-      const el = createUserLocationElement()
+      const el = createUserLocationElement();
       const marker = new maplibregl.Marker({
         element: el,
         anchor: 'center',
       })
         .setLngLat([coords.lng, coords.lat] as LngLatLike)
-        .addTo(map)
-      userMarkerRef.current = marker
+        .addTo(map);
+      userMarkerRef.current = marker;
     } else {
-      userMarkerRef.current.setLngLat([coords.lng, coords.lat] as LngLatLike)
+      userMarkerRef.current.setLngLat([coords.lng, coords.lat] as LngLatLike);
     }
-  }, [])
+  }, []);
 
   // Fly camera + optionally move marker + reverse geocode
-  const flyToLocation = useCallback(async (coords: LatLng, withMarker = true, label?: string) => {
-    const map = mapRef.current
-    if (!map) return
+  const flyToLocation = useCallback(
+    async (coords: LatLng, withMarker = true, label?: string) => {
+      const map = mapRef.current;
+      if (!map) return;
 
-    map.flyTo({
-      center: [coords.lng, coords.lat] as LngLatLike,
-      zoom: PIN_ZOOM,
-      duration: 680,
-      essential: true,
-      easing: (t) => t * (2 - t), // nice ease
-    })
+      map.flyTo({
+        center: [coords.lng, coords.lat] as LngLatLike,
+        zoom: PIN_ZOOM,
+        duration: 680,
+        essential: true,
+        easing: (t) => t * (2 - t), // nice ease
+      });
 
-    if (withMarker) {
-      // Small delay so fly feels natural before marker snaps
-      setTimeout(() => {
-        updateDestMarker(coords, label)
-        // Also draw route if we have pickup
-        if (pickupCoords) {
-          updateRoutePreview(pickupCoords, coords)
-        }
-      }, 120)
-    }
-  }, [updateDestMarker, updateRoutePreview, pickupCoords])
+      if (withMarker) {
+        // Small delay so fly feels natural before marker snaps
+        setTimeout(() => {
+          updateDestMarker(coords, label);
+          // Also draw route if we have pickup
+          if (pickupCoords) {
+            updateRoutePreview(pickupCoords, coords);
+          }
+        }, 120);
+      }
+    },
+    [updateDestMarker, updateRoutePreview, pickupCoords]
+  );
 
   // Core map initialization (once)
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return
+    if (!containerRef.current || mapRef.current) return;
 
-    let cancelled = false
+    let cancelled = false;
 
     const initMap = async () => {
       try {
-        const styleUrl = MAP_STYLE_PRIMARY
+        const styleUrl = MAP_STYLE_PRIMARY;
 
         const map = new maplibregl.Map({
           container: containerRef.current!,
@@ -292,246 +305,257 @@ export function MapView({ onConfirmDestination, initialDestCoords, initialPickup
           pitchWithRotate: false, // keep simple 2D for ride-hailing feel
           dragRotate: false,
           touchPitch: false,
-        })
+        });
 
-        mapRef.current = map
+        mapRef.current = map;
 
         // Add subtle zoom controls (iOS-like, small)
         map.addControl(
           new maplibregl.NavigationControl({ showCompass: false, showZoom: true }),
           'bottom-right'
-        )
+        );
 
         map.on('load', () => {
-          if (cancelled) return
-          setIsMapLoaded(true)
+          if (cancelled) return;
+          setIsMapLoaded(true);
 
           // Seed initial destination marker
           const startDest = initialDestCoords || {
             lat: userLocation.lat + 0.018,
             lng: userLocation.lng + 0.012,
-          }
-          updateDestMarker(startDest)
+          };
+          updateDestMarker(startDest);
 
           // Seed user marker
-          updateUserMarker(userLocation)
+          updateUserMarker(userLocation);
 
           // If we have both pickup + initial dest, draw route immediately
           if (pickupCoords && startDest) {
-            updateRoutePreview(pickupCoords, startDest)
+            updateRoutePreview(pickupCoords, startDest);
           }
 
           // Tap anywhere on map → move destination pin there + reverse geocode
           map.on('click', (e) => {
-            const coords: LatLng = { lat: e.lngLat.lat, lng: e.lngLat.lng }
-            updateDestMarker(coords)
-            debouncedReverse(coords)
-            updateRoutePreview(pickupCoords, coords)
-          })
+            const coords: LatLng = { lat: e.lngLat.lat, lng: e.lngLat.lng };
+            updateDestMarker(coords);
+            debouncedReverse(coords);
+            updateRoutePreview(pickupCoords, coords);
+          });
 
           // Keyboard accessibility (Escape clears suggestions)
           const handleKey = (ev: KeyboardEvent) => {
             if (ev.key === 'Escape') {
-              setShowSuggestions(false)
-              setSearchQuery('')
+              setShowSuggestions(false);
+              setSearchQuery('');
             }
-          }
-          window.addEventListener('keydown', handleKey)
+          };
+          window.addEventListener('keydown', handleKey);
 
           // Store cleanup for key listener
-          ;(map as any)._cargoKeyCleanup = () => window.removeEventListener('keydown', handleKey)
-        })
+          (map as any)._cargoKeyCleanup = () => window.removeEventListener('keydown', handleKey);
+        });
 
         // Error resilience for tile style
         map.on('error', (e) => {
-          console.warn('[CARGO Map] MapLibre error (attempting graceful handling):', e)
+          console.warn('[CARGO Map] MapLibre error (attempting graceful handling):', e);
           if (!mapError && styleUrl === MAP_STYLE_PRIMARY) {
             // One-shot fallback to demo tiles (still free, no key)
             try {
-              map.setStyle(MAP_STYLE_FALLBACK)
+              map.setStyle(MAP_STYLE_FALLBACK);
             } catch (_) {
-              setMapError('Map tiles temporarily unavailable. Using simplified view.')
+              setMapError('Map tiles temporarily unavailable. Using simplified view.');
             }
           }
-        })
+        });
 
         // Gentle resize handling (important inside device frame)
         const ro = new ResizeObserver(() => {
-          if (map && !cancelled) map.resize()
-        })
-        const el = containerRef.current
+          if (map && !cancelled) map.resize();
+        });
+        const el = containerRef.current;
         if (el) {
-          ro.observe(el)
+          ro.observe(el);
         }
-        ;(map as any)._cargoResizeObserver = ro
+        (map as any)._cargoResizeObserver = ro;
       } catch (err) {
-        console.error('[CARGO Map] Failed to initialize MapLibre:', err)
-        setMapError('Unable to load interactive map. Please check your connection.')
+        console.error('[CARGO Map] Failed to initialize MapLibre:', err);
+        setMapError('Unable to load interactive map. Please check your connection.');
       }
-    }
+    };
 
-    initMap()
+    initMap();
 
     // Full cleanup on unmount (critical for React 19 + hot reloads)
     return () => {
-      cancelled = true
-      abortControllerRef.current?.abort()
+      cancelled = true;
+      abortControllerRef.current?.abort();
 
-      const map = mapRef.current
+      const map = mapRef.current;
       if (map) {
         // Cleanup listeners / observers we attached
         try {
-          if ((map as any)._cargoKeyCleanup) (map as any)._cargoKeyCleanup()
-          if ((map as any)._cargoResizeObserver) (map as any)._cargoResizeObserver.disconnect()
+          if ((map as any)._cargoKeyCleanup) (map as any)._cargoKeyCleanup();
+          if ((map as any)._cargoResizeObserver) (map as any)._cargoResizeObserver.disconnect();
         } catch (_) {}
 
-        destMarkerRef.current?.remove()
-        userMarkerRef.current?.remove()
-        map.remove()
+        destMarkerRef.current?.remove();
+        userMarkerRef.current?.remove();
+        map.remove();
       }
-      mapRef.current = null
-      destMarkerRef.current = null
-      userMarkerRef.current = null
-    }
+      mapRef.current = null;
+      destMarkerRef.current = null;
+      userMarkerRef.current = null;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // run exactly once
+  }, []); // run exactly once
 
   // When external initial coords change (rare), sync marker
   useEffect(() => {
     if (initialDestCoords && isMapLoaded) {
-      updateDestMarker(initialDestCoords)
+      updateDestMarker(initialDestCoords);
     }
-  }, [initialDestCoords, isMapLoaded, updateDestMarker])
+  }, [initialDestCoords, isMapLoaded, updateDestMarker]);
 
   // Geolocation handler (graceful, called on mount + via button)
-  const handleGetUserLocation = useCallback((centerOnly = false) => {
-    if (!navigator.geolocation) {
-      // Fallback already in state
-      if (!centerOnly) {
-        flyToLocation(userLocation, true, 'Current location (SF demo)')
+  const handleGetUserLocation = useCallback(
+    (centerOnly = false) => {
+      if (!navigator.geolocation) {
+        // Fallback already in state
+        if (!centerOnly) {
+          flyToLocation(userLocation, true, 'Current location (SF demo)');
+        }
+        return;
       }
-      return
-    }
 
-    setIsLocating(true)
+      setIsLocating(true);
 
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const coords: LatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const coords: LatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
 
-        setUserLocation(coords)
-        updateUserMarker(coords)
+          setUserLocation(coords);
+          updateUserMarker(coords);
 
-        const map = mapRef.current
-        if (map) {
-          map.flyTo({ center: [coords.lng, coords.lat], zoom: 14.5, duration: 620 })
-        }
+          const map = mapRef.current;
+          if (map) {
+            map.flyTo({ center: [coords.lng, coords.lat], zoom: 14.5, duration: 620 });
+          }
 
-        // Reverse for nice pickup label if user wants to "set pickup"
-        const addr = await reverseGeocode(coords)
-        if (!centerOnly) {
-          // For destination picker flow, center + offer as potential dest too
-          updateDestMarker(coords, addr || 'Your current location')
-          if (pickupCoords) updateRoutePreview(pickupCoords, coords)
-        }
+          // Reverse for nice pickup label if user wants to "set pickup"
+          const addr = await reverseGeocode(coords);
+          if (!centerOnly) {
+            // For destination picker flow, center + offer as potential dest too
+            updateDestMarker(coords, addr || 'Your current location');
+            if (pickupCoords) updateRoutePreview(pickupCoords, coords);
+          }
 
-        // Also expose to parent via side effect on store (caller decides)
-        setIsLocating(false)
-      },
-      (err) => {
-        console.info('[CARGO Map] Geolocation denied or unavailable, using SF default.', err)
-        setIsLocating(false)
-        const fallback = SF_DEFAULT
-        setUserLocation(fallback)
-        updateUserMarker(fallback)
-        const map = mapRef.current
-        if (map) map.flyTo({ center: [fallback.lng, fallback.lat], zoom: DEFAULT_ZOOM, duration: 400 })
-        if (!centerOnly) {
-          updateDestMarker(fallback, 'San Francisco, CA (demo)')
-        }
-      },
-      { enableHighAccuracy: true, timeout: 8500, maximumAge: 60_000 }
-    )
-  }, [flyToLocation, updateDestMarker, updateRoutePreview, updateUserMarker, userLocation, pickupCoords])
+          // Also expose to parent via side effect on store (caller decides)
+          setIsLocating(false);
+        },
+        (err) => {
+          console.info('[CARGO Map] Geolocation denied or unavailable, using SF default.', err);
+          setIsLocating(false);
+          const fallback = SF_DEFAULT;
+          setUserLocation(fallback);
+          updateUserMarker(fallback);
+          const map = mapRef.current;
+          if (map)
+            map.flyTo({ center: [fallback.lng, fallback.lat], zoom: DEFAULT_ZOOM, duration: 400 });
+          if (!centerOnly) {
+            updateDestMarker(fallback, 'San Francisco, CA (demo)');
+          }
+        },
+        { enableHighAccuracy: true, timeout: 8500, maximumAge: 60_000 }
+      );
+    },
+    [
+      flyToLocation,
+      updateDestMarker,
+      updateRoutePreview,
+      updateUserMarker,
+      userLocation,
+      pickupCoords,
+    ]
+  );
 
   // Seed real user location shortly after map ready (nice UX, no blocking)
   useEffect(() => {
     if (isMapLoaded && !initialPickupCoords) {
-      const t = setTimeout(() => handleGetUserLocation(true), 680)
-      return () => clearTimeout(t)
+      const t = setTimeout(() => handleGetUserLocation(true), 680);
+      return () => clearTimeout(t);
     }
-  }, [isMapLoaded, handleGetUserLocation, initialPickupCoords])
+  }, [isMapLoaded, handleGetUserLocation, initialPickupCoords]);
 
   // Debounced live search (Photon)
   const runSearch = useCallback(
     debounce(async (q: string) => {
       if (!q.trim()) {
-        setSuggestions([])
-        return
+        setSuggestions([]);
+        return;
       }
-      const ac = new AbortController()
-      abortControllerRef.current = ac
-      setIsFetchingSuggestions(true)
+      const ac = new AbortController();
+      abortControllerRef.current = ac;
+      setIsFetchingSuggestions(true);
 
-      const results = await searchPlaces(q, 5, ac.signal)
-      setSuggestions(results.length ? results : [])
-      setIsFetchingSuggestions(false)
+      const results = await searchPlaces(q, 5, ac.signal);
+      setSuggestions(results.length ? results : []);
+      setIsFetchingSuggestions(false);
     }, 290),
     []
-  )
+  );
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    setSearchQuery(val)
-    setShowSuggestions(true)
-    runSearch(val)
-  }
+    const val = e.target.value;
+    setSearchQuery(val);
+    setShowSuggestions(true);
+    runSearch(val);
+  };
 
   const handleSelectSuggestion = async (s: GeocodeResult) => {
-    setShowSuggestions(false)
-    setSearchQuery('')
-    setSuggestions([])
+    setShowSuggestions(false);
+    setSearchQuery('');
+    setSuggestions([]);
 
-    await flyToLocation(s.coords, true, s.address)
+    await flyToLocation(s.coords, true, s.address);
     // updateRoutePreview already called inside flyToLocation flow via closure
-    updateRoutePreview(pickupCoords, s.coords)
-  }
+    updateRoutePreview(pickupCoords, s.coords);
+  };
 
   const clearSearch = () => {
-    setSearchQuery('')
-    setSuggestions([])
-    setShowSuggestions(false)
-    abortControllerRef.current?.abort()
-  }
+    setSearchQuery('');
+    setSuggestions([]);
+    setShowSuggestions(false);
+    abortControllerRef.current?.abort();
+  };
 
   // "Use current location" for destination
   const handleUseCurrentAsDest = () => {
-    const coords = userLocation
-    flyToLocation(coords, true, 'Your current location')
-    updateRoutePreview(pickupCoords, coords)
-    setShowSuggestions(false)
-  }
+    const coords = userLocation;
+    flyToLocation(coords, true, 'Your current location');
+    updateRoutePreview(pickupCoords, coords);
+    setShowSuggestions(false);
+  };
 
   // Confirm flow – exactly as required (update store + route to /service)
   const handleConfirm = () => {
-    if (!selectedDest) return
+    if (!selectedDest) return;
 
-    const price = calculateEstimatedPrice(pickupCoords, selectedDest.coords)
-    onConfirmDestination(selectedDest.address, selectedDest.coords, price)
-  }
+    const price = calculateEstimatedPrice(pickupCoords, selectedDest.coords);
+    onConfirmDestination(selectedDest.address, selectedDest.coords, price);
+  };
 
   // Quick chips (Figma-inspired suggested places)
   const quickPlaces = [
     { label: 'Financial District', coords: { lat: 37.7936, lng: -122.3965 } },
-    { label: 'SFO Airport', coords: { lat: 37.6213, lng: -122.3790 } },
+    { label: 'SFO Airport', coords: { lat: 37.6213, lng: -122.379 } },
     { label: 'Mission Bay', coords: { lat: 37.7765, lng: -122.3943 } },
-  ]
+  ];
 
   const handleQuickPlace = (coords: LatLng, label: string) => {
-    flyToLocation(coords, true, label)
-    updateRoutePreview(pickupCoords, coords)
-    setShowSuggestions(false)
-  }
+    flyToLocation(coords, true, label);
+    updateRoutePreview(pickupCoords, coords);
+    setShowSuggestions(false);
+  };
 
   // Render
   return (
@@ -579,7 +603,7 @@ export function MapView({ onConfirmDestination, initialDestCoords, initialPickup
                 value={searchQuery}
                 onChange={handleSearchChange}
                 onFocus={() => setShowSuggestions(true)}
-                placeholder={selectedDest?.address || "Where to?"}
+                placeholder={selectedDest?.address || 'Where to?'}
                 className="input h-11 w-full bg-[#F2F2F7] border-0 pl-10 text-[15px] placeholder:text-[#8E8E93] shadow-sm"
               />
               <MapPin className="absolute left-3.5 top-3.5 text-[#0A7CFF]" size={17} />
@@ -600,13 +624,17 @@ export function MapView({ onConfirmDestination, initialDestCoords, initialPickup
               className="flex h-9 w-9 items-center justify-center rounded-full bg-white shadow border border-[#E5E5EA] active:bg-zinc-50 disabled:opacity-50"
               aria-label="My location"
             >
-              <Navigation size={17} className={isLocating ? 'animate-pulse text-[#0A7CFF]' : 'text-[#0A7CFF]'} />
+              <Navigation
+                size={17}
+                className={isLocating ? 'animate-pulse text-[#0A7CFF]' : 'text-[#0A7CFF]'}
+              />
             </button>
           </div>
 
           {/* Pickup indicator (subtle, always visible) */}
           <div className="mt-1.5 pl-1 text-[10px] uppercase tracking-[0.5px] text-[#8E8E93] flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#34C759]" /> PICKUP: {booking.pickupLocation}
+            <div className="w-1.5 h-1.5 rounded-full bg-[#34C759]" /> PICKUP:{' '}
+            {booking.pickupLocation}
           </div>
         </div>
       </div>
@@ -632,7 +660,9 @@ export function MapView({ onConfirmDestination, initialDestCoords, initialPickup
               </button>
             ))
           ) : searchQuery.length > 1 ? (
-            <div className="px-4 py-6 text-sm text-[#6C6C6E] text-center">No matches. Try "airport" or "downtown".</div>
+            <div className="px-4 py-6 text-sm text-[#6C6C6E] text-center">
+              No matches. Try "airport" or "downtown".
+            </div>
           ) : null}
 
           {/* Quick action row inside suggestions */}
@@ -645,8 +675,8 @@ export function MapView({ onConfirmDestination, initialDestCoords, initialPickup
             </button>
             <button
               onClick={() => {
-                setShowSuggestions(false)
-                handleGetUserLocation(true)
+                setShowSuggestions(false);
+                handleGetUserLocation(true);
               }}
               className="flex-1 text-left px-3 py-2 text-xs font-medium bg-white rounded-xl border active:bg-zinc-50"
             >
@@ -693,7 +723,9 @@ export function MapView({ onConfirmDestination, initialDestCoords, initialPickup
                   </div>
                 </div>
                 <div className="min-w-0 flex-1 leading-tight">
-                  <div className="text-[10px] uppercase tracking-[1px] text-[#8E8E93]">DESTINATION</div>
+                  <div className="text-[10px] uppercase tracking-[1px] text-[#8E8E93]">
+                    DESTINATION
+                  </div>
                   <div className="font-semibold text-[15px] mt-px leading-snug text-balance">
                     {selectedDest.address}
                   </div>
@@ -720,7 +752,9 @@ export function MapView({ onConfirmDestination, initialDestCoords, initialPickup
           </div>
         ) : (
           <div className="text-center py-2">
-            <div className="text-sm font-medium text-[#111]">Tap the map or search to choose destination</div>
+            <div className="text-sm font-medium text-[#111]">
+              Tap the map or search to choose destination
+            </div>
             <button
               onClick={handleUseCurrentAsDest}
               className="mt-2.5 text-xs font-semibold text-[#0A7CFF] active:underline"
@@ -760,7 +794,7 @@ export function MapView({ onConfirmDestination, initialDestCoords, initialPickup
         .maplibregl-ctrl button { width: 32px !important; height: 32px !important; }
       `}</style>
     </div>
-  )
+  );
 }
 
-export default MapView
+export default MapView;
