@@ -1,4 +1,3 @@
-import { format } from 'date-fns';
 import { CheckCircle, CreditCard } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -6,7 +5,7 @@ import { useAppStore } from '../stores/useAppStore';
 
 export function PaymentScreen() {
   const navigate = useNavigate();
-  const { booking, updateBooking, completeRide, user } = useAppStore();
+  const { booking, updateBooking, startRide, user } = useAppStore();
   const [selectedMethod, setSelectedMethod] = useState<'card' | 'paypal' | 'cash'>(
     booking.paymentMethod || 'card'
   );
@@ -22,26 +21,31 @@ export function PaymentScreen() {
     setProcessing(true);
     updateBooking({ paymentMethod: selectedMethod });
 
-    await new Promise((r) => setTimeout(r, 1100));
+    await new Promise((r) => setTimeout(r, 920));
 
-    // Record completed ride
-    completeRide({
+    const driverPool = ['Maria S.', 'James K.', 'Priya N.', 'Carlos M.', 'Aisha K.'];
+    const vehiclePool = ['Toyota Camry • ABC 123', 'Honda Accord • XYZ 789', 'Tesla Model 3 • EV 456'];
+
+    const driver = driverPool[Math.floor(Math.random() * driverPool.length)];
+    const vehicle = vehiclePool[Math.floor(Math.random() * vehiclePool.length)];
+
+    // Start active ride for tracking
+    startRide({
       id: 'ride_' + Date.now(),
-      date: format(new Date(), 'MMM dd, yyyy • HH:mm'),
+      driver,
+      vehicle,
+      etaMinutes: booking.rideType === 'premium' ? 4 : 6,
+      price: booking.estimatedPrice || 12,
       from: booking.pickupLocation,
       to: booking.destinationLocation || 'Downtown',
-      price: booking.estimatedPrice || 12,
-      driver: ['Maria S.', 'James K.', 'Priya N.'][Math.floor(Math.random() * 3)],
-      rating: 4.9,
+      rideType: booking.rideType || 'economy',
+      startedAt: new Date().toISOString(),
     });
 
     setProcessing(false);
-    alert(
-      `🎉 Ride booked! Driver arriving in ~${booking.rideType === 'premium' ? '4' : '3'} min.\n\nThank you for using CARGO. (This is the high-fidelity Figma replica)`
-    );
 
-    // Reset and go home
-    navigate('/home');
+    // Go to beautiful tracking screen instead of alert
+    navigate('/tracking');
   };
 
   return (
@@ -78,6 +82,7 @@ export function PaymentScreen() {
         {methods.map((m) => (
           <button
             key={m.id}
+            type="button"
             onClick={() => setSelectedMethod(m.id)}
             className={`w-full flex items-center gap-4 p-4 mb-2 rounded-2xl border text-left transition-all ${selectedMethod === m.id ? 'border-[#0A7CFF] bg-blue-50/40' : 'border-[#E5E5EA]'}`}
           >
@@ -93,6 +98,7 @@ export function PaymentScreen() {
         ))}
 
         <button
+          type="button"
           onClick={() =>
             alert(
               'Add / Scan card flow (Figma 18 & 19) would open a modal here with camera + form.'
@@ -106,6 +112,7 @@ export function PaymentScreen() {
 
       <div className="px-4 mt-8">
         <button
+          type="button"
           onClick={confirmBooking}
           disabled={processing}
           className="btn btn-primary w-full text-[17px] font-semibold h-[60px]"

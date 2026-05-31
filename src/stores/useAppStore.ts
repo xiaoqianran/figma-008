@@ -17,6 +17,25 @@ export interface BookingState {
   destinationCoords?: { lat: number; lng: number };
 }
 
+export interface SavedPlace {
+  id: string;
+  name: string;
+  address: string;
+  coords?: { lat: number; lng: number };
+}
+
+export interface ActiveRide {
+  id: string;
+  driver: string;
+  vehicle: string;
+  etaMinutes: number;
+  price: number;
+  from: string;
+  to: string;
+  rideType: RideType;
+  startedAt: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -42,7 +61,15 @@ interface AppState {
     price: number;
     driver: string;
     rating: number;
+    fromCoords?: { lat: number; lng: number };
+    toCoords?: { lat: number; lng: number };
   }>;
+
+  // User saved places (Favorites)
+  favorites: SavedPlace[];
+
+  // Active ride (for tracking after booking)
+  activeRide: ActiveRide | null;
 
   // Actions
   setOnboarded: (value: boolean) => void;
@@ -51,6 +78,16 @@ interface AppState {
   resetBooking: () => void;
   completeRide: (ride: AppState['rideHistory'][0]) => void;
   logout: () => void;
+
+  // Favorites actions
+  addFavorite: (place: Omit<SavedPlace, 'id'>) => void;
+  removeFavorite: (id: string) => void;
+
+  // Active ride actions
+  startRide: (ride: ActiveRide) => void;
+  updateActiveRide: (patch: Partial<ActiveRide>) => void;
+  cancelRide: () => void;
+  completeActiveRide: () => void;
 }
 
 const initialBooking: BookingState = {
@@ -73,6 +110,8 @@ export const useAppStore = create<AppState>()(
       user: null,
       booking: initialBooking,
       rideHistory: [],
+      favorites: [],
+      activeRide: null,
 
       setOnboarded: (value) => set({ isOnboarded: value }),
 
@@ -97,6 +136,49 @@ export const useAppStore = create<AppState>()(
           isOnboarded: false,
           booking: initialBooking,
         }),
+
+      addFavorite: (place) =>
+        set((state) => ({
+          favorites: [
+            ...state.favorites,
+            { ...place, id: 'fav_' + Date.now() + Math.random().toString(36).slice(2) },
+          ],
+        })),
+
+      removeFavorite: (id) =>
+        set((state) => ({
+          favorites: state.favorites.filter((f) => f.id !== id),
+        })),
+
+      startRide: (ride) => set({ activeRide: ride }),
+
+      updateActiveRide: (patch) =>
+        set((state) => ({
+          activeRide: state.activeRide ? { ...state.activeRide, ...patch } : null,
+        })),
+
+      cancelRide: () => set({ activeRide: null }),
+
+      completeActiveRide: () =>
+        set((state) => {
+          if (!state.activeRide) return state;
+
+          const completed = {
+            id: state.activeRide.id,
+            date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' • ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            from: state.activeRide.from,
+            to: state.activeRide.to,
+            price: state.activeRide.price,
+            driver: state.activeRide.driver,
+            rating: 4.9,
+          };
+
+          return {
+            rideHistory: [completed, ...state.rideHistory].slice(0, 20),
+            activeRide: null,
+            booking: initialBooking,
+          };
+        }),
     }),
     {
       name: 'cargo-app-storage',
@@ -104,6 +186,8 @@ export const useAppStore = create<AppState>()(
         isOnboarded: state.isOnboarded,
         user: state.user,
         rideHistory: state.rideHistory,
+        favorites: state.favorites,
+        activeRide: state.activeRide,
       }),
     }
   )

@@ -130,6 +130,7 @@ export function MapView({
   const [suggestions, setSuggestions] = useState<GeocodeResult[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -537,11 +538,17 @@ export function MapView({
   };
 
   // Confirm flow – exactly as required (update store + route to /service)
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!selectedDest) return;
+
+    setIsConfirming(true);
+    // Small delay for perceived reliability (matches high-quality prototypes)
+    await new Promise(r => setTimeout(r, 120));
 
     const price = calculateEstimatedPrice(pickupCoords, selectedDest.coords);
     onConfirmDestination(selectedDest.address, selectedDest.coords, price);
+    // Note: parent usually navigates away, but reset in case
+    setIsConfirming(false);
   };
 
   // Quick chips (Figma-inspired suggested places)
@@ -739,11 +746,13 @@ export function MapView({
             </div>
 
             <button
+              type="button"
               onClick={handleConfirm}
+              disabled={!selectedDest || isConfirming}
               data-testid="set-destination-btn"
-              className="btn btn-primary w-full h-[54px] text-[17px] font-semibold tracking-[-0.2px] shadow-md active:scale-[0.985]"
+              className="btn btn-primary w-full h-[54px] text-[17px] font-semibold tracking-[-0.2px] shadow-md active:scale-[0.985] disabled:opacity-60 transition-all"
             >
-              Set destination
+              {isConfirming ? 'Setting destination…' : 'Set destination'}
             </button>
 
             <div className="text-center text-[10px] text-[#8E8E93] -mt-1">

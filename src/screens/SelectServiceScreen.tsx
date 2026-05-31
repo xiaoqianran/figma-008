@@ -77,6 +77,7 @@ export function SelectServiceScreen() {
           const isSel = selected === ride.type;
           return (
             <button
+              type="button"
               key={ride.type}
               onClick={() => selectAndContinue(ride.type, ride.price)}
               className={`ride-card w-full flex gap-4 bg-white border rounded-2xl p-4 text-left active:opacity-90 ${isSel ? 'selected border-[#0A7CFF]' : 'border-transparent'}`}
@@ -109,6 +110,7 @@ export function SelectServiceScreen() {
 
       {/* Promo entry hint (Figma 16) */}
       <button
+        type="button"
         onClick={() => {
           const code = prompt('Enter promo code (try CARGO20)');
           if (code) {

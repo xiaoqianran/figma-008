@@ -10,6 +10,8 @@ import { FavoritesScreen } from './screens/FavoritesScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { PaymentScreen } from './screens/PaymentScreen';
+import { ProfileScreen } from './screens/ProfileScreen';
+import { RideTrackingScreen } from './screens/RideTrackingScreen';
 import { SelectServiceScreen } from './screens/SelectServiceScreen';
 import { SignUpScreen } from './screens/SignUpScreen';
 import { SplashScreen } from './screens/SplashScreen';
@@ -49,6 +51,7 @@ function DeviceFrame({ children }: { children: React.ReactNode }) {
           {/* Dev helper: back button overlay when not on splash */}
           {canGoBack && (
             <button
+              type="button"
               onClick={() => navigate(-1)}
               className="absolute top-[60px] left-4 z-[100] bg-white/90 backdrop-blur rounded-full p-2 shadow-md active:scale-95"
               aria-label="Go back"
@@ -77,8 +80,8 @@ function DeviceFrame({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Bottom tab bar (only visible on main app screens after onboarding)
-function MainTabBar() {
+// Bottom tab bar with premium spring-animated sliding pill indicator
+export function MainTabBar() {
   const location = useLocation();
   const navigate = useNavigate();
   const tabs = [
@@ -90,17 +93,32 @@ function MainTabBar() {
   ];
 
   const active = tabs.findIndex((t) => location.pathname.startsWith(t.path));
+  const activeSafe = active === -1 ? 0 : active;
+  const pillLeft = `${(activeSafe / tabs.length) * 100}%`;
+  const pillWidth = `${(1 / tabs.length) * 100}%`;
 
   return (
-    <div className="tab-bar absolute bottom-0 left-0 right-0 h-14 flex items-center justify-around z-50 border-t border-[#E5E5EA]">
+    <div className="tab-bar absolute bottom-0 left-0 right-0 h-14 flex items-center justify-around z-50 border-t border-[#E5E5EA] bg-white/95 backdrop-blur-xl">
+      {/* Sliding active pill - spring animated for premium feel */}
+      <motion.div
+        className="absolute top-1 bottom-1 bg-[#0A7CFF]/10 rounded-2xl z-0"
+        style={{ left: pillLeft, width: pillWidth }}
+        transition={{ type: 'spring', stiffness: 420, damping: 32, mass: 0.7 }}
+        layoutId="tab-active-pill"
+      />
+
       {tabs.map((tab, idx) => {
         const Icon = tab.icon;
         const isActive = idx === active;
         return (
           <button
             key={tab.path}
-            onClick={() => navigate(tab.path)}
-            className={`flex flex-col items-center justify-center text-xs transition-colors ${isActive ? 'text-[#0A7CFF]' : 'text-[#8E8E93]'}`}
+            type="button"
+            onClick={() => {
+              if (navigator.vibrate) navigator.vibrate(6);
+              navigate(tab.path);
+            }}
+            className={`relative flex flex-col items-center justify-center text-xs z-10 transition-colors ${isActive ? 'text-[#0A7CFF]' : 'text-[#8E8E93]'}`}
           >
             <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
             <span className="mt-px">{tab.label}</span>
@@ -160,19 +178,58 @@ export default function App() {
           }
         />
 
-        <Route path="/service" element={<SelectServiceScreen />} />
-        <Route path="/payment" element={<PaymentScreen />} />
+        <Route
+          path="/service"
+          element={
+            <motion.div
+              key="service"
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -30 }}
+              transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+              className="screen bg-white"
+            >
+              <SelectServiceScreen />
+            </motion.div>
+          }
+        />
+        <Route
+          path="/payment"
+          element={
+            <motion.div
+              key="payment"
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -30 }}
+              transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+              className="screen bg-white"
+            >
+              <PaymentScreen />
+            </motion.div>
+          }
+        />
+
+        <Route
+          path="/tracking"
+          element={
+            <motion.div
+              key="tracking"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+              className="screen bg-[#F8F9FA]"
+            >
+              <RideTrackingScreen />
+            </motion.div>
+          }
+        />
 
         {/* Placeholder routes for remaining flows (implemented in later phases) */}
         <Route path="/favorites" element={<FavoritesScreen />} />
         <Route path="/add-place" element={<AddPlaceScreen />} />
         <Route path="/activity" element={<ActivityScreen />} />
-        <Route
-          path="/profile"
-          element={
-            <div className="p-8 text-center text-sm text-gray-500">Profile &amp; Settings</div>
-          }
-        />
+        <Route path="/profile" element={<ProfileScreen />} />
 
         {/* Fallback */}
         <Route path="*" element={<SplashScreen />} />

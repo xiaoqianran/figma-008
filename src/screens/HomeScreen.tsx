@@ -1,10 +1,11 @@
-import { ArrowRight, Clock, MapPin } from 'lucide-react';
+import { ArrowRight, Car, Clock, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/useAppStore';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function HomeScreen() {
   const navigate = useNavigate();
-  const { user, booking, updateBooking } = useAppStore();
+  const { user, booking, updateBooking, activeRide } = useAppStore();
 
   const quickActions = [
     { label: 'Set destination', icon: MapPin, action: () => navigate('/destination') },
@@ -38,6 +39,36 @@ export function HomeScreen() {
         </div>
       </div>
 
+      {/* Current Ride Banner - shows when activeRide exists (huge smoothness win) */}
+      <AnimatePresence>
+        {activeRide && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mx-4 mt-2"
+          >
+            <button
+              onClick={() => navigate('/tracking')}
+              className="w-full bg-[#0A7CFF] text-white rounded-2xl p-3.5 text-left active:scale-[0.985] transition-all"
+            >
+              <div className="flex items-center justify-between text-sm">
+                <div>
+                  <div className="font-semibold tracking-[-0.2px] flex items-center gap-1.5">
+                    <Car size={16} /> {activeRide.driver} • {activeRide.vehicle.split(' • ')[0]}
+                  </div>
+                  <div className="text-white/80 text-xs mt-0.5">Arriving in ~{activeRide.etaMinutes} min</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs opacity-75">TRACK</div>
+                  <div className="font-semibold tabular-nums text-base leading-none mt-px">{activeRide.etaMinutes}</div>
+                </div>
+              </div>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Hero / Map area (Figma Home has prominent map or location card) */}
       <div className="mx-4 mt-3 rounded-2xl overflow-hidden border border-[#E5E5EA] bg-white shadow-sm h-[260px] relative">
         {/* Placeholder for real MapLibre – high visual fidelity for now */}
@@ -49,6 +80,7 @@ export function HomeScreen() {
           <div className="text-sm text-[#6C6C6E] mt-0.5">{booking.pickupLocation}</div>
 
           <button
+            type="button"
             onClick={() => navigate('/destination')}
             className="mt-6 btn btn-primary px-8 text-sm font-semibold shadow-md"
           >
@@ -70,6 +102,7 @@ export function HomeScreen() {
             const Icon = qa.icon;
             return (
               <button
+                type="button"
                 key={i}
                 onClick={qa.action}
                 className="flex-1 bg-white border border-[#E5E5EA] active:bg-zinc-50 rounded-2xl p-4 flex flex-col items-start text-left"
