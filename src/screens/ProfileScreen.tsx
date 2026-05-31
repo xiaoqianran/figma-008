@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useAppStore } from '../stores/useAppStore';
 
 function TabBar() {
@@ -66,7 +67,7 @@ export function ProfileScreen() {
 
         <div className="mt-6 space-y-px bg-white rounded-3xl overflow-hidden border border-[#E5E5EA]">
           {[
-            { label: 'Payment Methods', action: () => alert('Payment methods flow (Figma)') },
+            { label: 'Payment Methods', action: () => toast('Payment methods', { description: 'Opens Figma flow 17-19 (demo)' }) },
             { label: 'Ride History', action: () => navigate('/activity') },
             { label: 'Saved Places', action: () => navigate('/favorites') },
             { label: 'Help & Support', action: () => {} },

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useAppStore } from '../stores/useAppStore';
 
 export function LoginScreen() {
@@ -50,7 +51,7 @@ export function LoginScreen() {
       <div className="mt-8 text-[11px] text-center text-[#8E8E93]">
         Forgot your password?{' '}
         <button
-          onClick={() => alert('Forgot password flow matches Figma screen 6')}
+          onClick={() => toast('Forgot password', { description: 'Matches Figma screen 6 (demo)' })}
           className="underline text-[#0A7CFF]"
         >
           Reset here

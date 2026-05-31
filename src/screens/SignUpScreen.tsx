@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useAppStore } from '../stores/useAppStore';
 
 export function SignUpScreen() {
@@ -62,7 +63,7 @@ export function SignUpScreen() {
 
         {/* Country picker hint (matches Figma screen 4) */}
         <button
-          onClick={() => alert('Country picker would open here (screen 4 in Figma)')}
+          onClick={() => toast('Country selector', { description: 'Figma screen 4 (demo)' })}
           className="text-xs text-[#0A7CFF] flex items-center gap-1 active:opacity-60"
         >
           United States +1 ▾

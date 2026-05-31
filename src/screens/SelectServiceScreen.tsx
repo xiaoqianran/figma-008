@@ -1,6 +1,7 @@
 import { Clock, Users } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { type RideType, useAppStore } from '../stores/useAppStore';
 
 const RIDE_OPTIONS: Array<{
@@ -115,7 +116,9 @@ export function SelectServiceScreen() {
           const code = prompt('Enter promo code (try CARGO20)');
           if (code) {
             updateBooking({ promoCode: code });
-            alert(`Promo ${code} applied! 20% off selected ride.`);
+            toast.success(`Promo ${code} applied`, {
+              description: '20% off applied to your ride',
+            });
           }
         }}
         className="mx-4 mt-6 text-sm py-3 border border-dashed rounded-xl text-[#0A7CFF]"

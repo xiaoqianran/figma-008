@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, Phone, Star, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useAppStore } from '../stores/useAppStore';
 
 export function RideTrackingScreen() {
@@ -145,14 +146,14 @@ export function RideTrackingScreen() {
           <button
             type="button"
             className="flex-1 h-11 rounded-2xl border border-[#E5E5EA] font-medium flex items-center justify-center gap-2 active:bg-zinc-50"
-            onClick={() => alert('Calling driver (demo)')}
+            onClick={() => toast.success('Calling driver...', { description: 'Demo only' })}
           >
             <Phone size={17} /> Call
           </button>
           <button
             type="button"
             className="flex-1 h-11 rounded-2xl bg-[#0A7CFF] text-white font-medium flex items-center justify-center gap-2 active:bg-[#0066CC]"
-            onClick={() => alert('Message opened (demo)')}
+            onClick={() => toast.info('Opening chat with driver...', { description: 'Demo only' })}
           >
             Message
           </button>

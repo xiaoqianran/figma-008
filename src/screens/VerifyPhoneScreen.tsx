@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useAppStore } from '../stores/useAppStore';
 
 /**
@@ -89,7 +90,7 @@ export function VerifyPhoneScreen() {
 
       <div className="mt-6 text-center">
         <button
-          onClick={() => alert('Resend code (demo)')}
+          onClick={() => toast.success('Code resent', { description: 'New code sent to your phone (demo)' })}
           className="text-[#0A7CFF] text-sm font-medium"
         >
           Didn’t receive a code? Resend

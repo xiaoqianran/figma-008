@@ -1,6 +1,7 @@
 import { MapPin } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 /**
  * Figma screen 13: Add new place
@@ -14,7 +15,9 @@ export function AddPlaceScreen() {
   const handleSave = () => {
     if (!name || !address) return;
     // In real app this would persist to a places store
-    alert(`Saved "${name}" — will appear in Favorites (demo only)`);
+    toast.success(`Saved "${name}"`, {
+      description: 'Added to your Favorites',
+    });
     navigate('/favorites');
   };
 
