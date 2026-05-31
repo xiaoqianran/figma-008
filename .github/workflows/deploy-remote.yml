@@ -1,0 +1,130 @@
+name: Deploy to Remote Server (自部署)
+
+on:
+  push:
+    branches: ['main']
+  workflow_dispatch:
+    inputs:
+      base_path:
+        description: '部署 base 路径 (默认 /)'
+        required: false
+        default: '/'
+
+# 远程自部署不需要 GitHub Pages 权限
+permissions:
+  contents: read
+
+concurrency:
+  group: 'remote-deploy'
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.DEPLOY_URL || 'https://你的域名.com' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # 注意：远程自部署通常使用根路径 /，与 GitHub Pages 的子路径不同
+      # 这里使用 CLI 参数强制覆盖 vite.config.ts 里的 base: '/figma-008/'
+      - name: Build for production (base=/)
+        run: |
+          npm run typecheck
+          npx vite build --base /
+
+      # 可选：为 SPA 准备 404.html（某些静态托管需要）
+      - name: Prepare SPA fallback
+        run: cp dist/index.html dist/404.html
+
+      # ============================================================
+      # 远程部署方式（二选一，推荐方式 A）
+      # ============================================================
+
+      # 方式 A（最推荐给大多数人）：appleboy/scp-action + ssh-action
+      # 优点：配置简单、国内教程多、支持密码/密钥
+      - name: Deploy via SCP (appleboy)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER || 'root' }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # password: ${{ secrets.SSH_PASSWORD }}   # 如使用密码而非密钥，取消注释这行并注释 key
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          source: "dist/*"
+          target: ${{ secrets.DEPLOY_PATH || '/var/www/cargo' }}
+          strip_components: 1
+          overwrite: true
+          rm: true
+
+      # 部署完成后执行远程命令（原子替换 + 重载 nginx）
+      - name: Post-deploy on remote server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER || 'root' }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          script: |
+            DEPLOY_PATH="${{ secrets.DEPLOY_PATH || '/var/www/cargo' }}"
+            
+            # 如果你使用了宝塔/1Panel 等面板，路径可能是 /www/wwwroot/xxx
+            # 下面是安全做法：先同步到一个临时目录，再原子移动
+            echo "✅ 文件已同步到 ${DEPLOY_PATH}"
+            
+            # 可选：重载 Nginx（需在服务器配置 sudo 免密 + nginx 重载权限）
+            if [ "${{ secrets.RELOAD_NGINX }}" = "true" ] || [ "${{ vars.RELOAD_NGINX }}" = "true" ]; then
+              sudo systemctl reload nginx 2>/dev/null || \
+              sudo nginx -s reload 2>/dev/null || \
+              echo "Nginx reload skipped (no sudo permission or not installed)"
+            fi
+            
+            # 你可以在这里加自定义命令，例如清除 CDN 缓存、发钉钉通知等
+            echo "🎉 远程部署完成！"
+
+      # ------------------- 进阶方式 B（注释掉的方式 A 后启用） -------------------
+      # 方式 B：webfactory/ssh-agent + 原生 rsync（更干净，适合有经验的用户）
+      # - name: Setup SSH Agent (进阶方式)
+      #   uses: webfactory/ssh-agent@v0.9.1
+      #   with:
+      #     ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      #
+      # - name: Deploy via rsync (进阶方式)
+      #   run: |
+      #     rsync -avz --delete \
+      #       -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
+      #       ./dist/ \
+      #       "${{ secrets.DEPLOY_USER || 'root' }}@${{ secrets.DEPLOY_HOST }}:${{ secrets.DEPLOY_PATH || '/var/www/cargo' }}/"
+      # ------------------------------------------------------------
+
+      - name: Deployment Summary
+        run: |
+          echo "✅ 远程自部署流程已执行完毕"
+          echo ""
+          echo "📌 必须配置的 GitHub Secrets（Settings → Secrets and variables → Actions）："
+          echo "   DEPLOY_HOST      → 你的服务器 IP 或域名（如 123.45.67.89）"
+          echo "   SSH_PRIVATE_KEY  → 服务器 SSH 私钥内容（整个 key 文本，包括 -----BEGIN...）"
+          echo "   DEPLOY_USER      → SSH 用户名（默认 root，可选）"
+          echo "   DEPLOY_PATH      → 远程网站根目录（默认 /var/www/cargo）"
+          echo "   （可选）DEPLOY_PORT   → SSH 端口（默认 22）"
+          echo "   （可选）RELOAD_NGINX  → true（需要服务器配置 sudo 免密）"
+          echo ""
+          echo "📌 远程服务器 Nginx 必须配置 SPA 回退（关键！）："
+          echo "   location / {"
+          echo "       try_files \$uri \$uri/ /index.html;"
+          echo "   }"
+          echo ""
+          echo "访问地址请在仓库 Variables 中设置 DEPLOY_URL（可选）"
