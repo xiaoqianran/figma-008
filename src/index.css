@@ -383,8 +383,7 @@ textarea:focus-visible {
 }
 
 /* Improve marker hit areas on mobile */
-.cargo-dest-pin svg,
-.cargo-user-loc {
+.cargo-dest-pin svg {
   touch-action: none;
 }
 

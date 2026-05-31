@@ -29,8 +29,9 @@ import {
  * - Bottom floating confirm panel with Figma-matched aesthetics (uses existing tokens)
  * - Touch friendly, 60fps pan/zoom via MapLibre
  * - Lazy-safe (parent should lazy-load), full cleanup on unmount
- * - Custom SVG markers (flag pin for dest + "终点" label, pulsing green dot + "起点" badge for user/pickup)
- * - Pickup (起点) is fixed origin (from Home "Where to?" or booking); dest (终点) chosen on map with immediate connecting line
+ * - Clean global map: only the destination pin is shown.
+ * - Starting point (起点) is the user's current location (from booking store), used only for the route line and price.
+ * - No visual origin marker on the map itself — user simply taps to choose the destination.
  * - Small legal attribution footer
  *
  * Tile source (free, no key):
@@ -103,18 +104,9 @@ function createDestinationMarkerElement(): HTMLDivElement {
   return el;
 }
 
-// Pulsing user location marker (iOS-like green dot + halo) — now prominently labeled "起点"
-// Start (pickup) is ALWAYS the fixed origin: user's current / booking location.
-function createUserLocationElement(): HTMLDivElement {
-  const el = document.createElement('div');
-  el.className = 'cargo-user-loc';
-  el.innerHTML = `
-    <div class="cargo-user-dot-outer"></div>
-    <div class="cargo-user-dot"></div>
-    <div class="cargo-user-label">起点</div>
-  `;
-  return el;
-}
+// We deliberately do NOT render any visual marker for the starting point on the map.
+// The origin (起点) is the user's current location from the store (booking.pickupCoords or geolocation).
+// It is only used for the route line and price calculation. The map is kept clean for destination selection.
 
 export function MapView({
   onConfirmDestination,
@@ -312,24 +304,8 @@ export function MapView({
     }
   }, []);
 
-  // Place / update user location marker (non-draggable, pulsing)
-  const updateUserMarker = useCallback((coords: LatLng) => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    if (!userMarkerRef.current) {
-      const el = createUserLocationElement();
-      const marker = new maplibregl.Marker({
-        element: el,
-        anchor: 'center',
-      })
-        .setLngLat([coords.lng, coords.lat] as LngLatLike)
-        .addTo(map);
-      userMarkerRef.current = marker;
-    } else {
-      userMarkerRef.current.setLngLat([coords.lng, coords.lat] as LngLatLike);
-    }
-  }, []);
+  // No visual origin marker is rendered on the map (clean global map experience).
+  // Origin is handled logically via pickupCoords for route + price only.
 
   // Fly camera + optionally move marker + reverse geocode
   // Now also manages dest state: if label provided (search/quick/geoloc), set real address immediately (no loading).
@@ -408,9 +384,8 @@ export function MapView({
           if (cancelled) return;
           setIsMapLoaded(true);
 
-          // Always show clear pickup / user location marker first — prominently labeled "起点" (green)
-          // This is the FIXED origin when coming from Home "Where to?". Always visible + labeled from t=0.
-          updateUserMarker(pickupCoords || userLocation);
+          // Clean global map — no visual marker for the starting point.
+          // Origin is taken from the booking store (user's location) and only used for the route line + price.
 
           // Do NOT auto-place a destination marker on load.
           // Let the user explicitly choose the destination (终点) by tapping or searching.
@@ -562,7 +537,7 @@ export function MapView({
           const coords: LatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
 
           setUserLocation(coords);
-          updateUserMarker(coords);
+          // No visual user marker on map (clean experience)
 
           const map = mapRef.current;
           if (map) {
@@ -592,7 +567,7 @@ export function MapView({
           setIsLocating(false);
           const fallback = SF_DEFAULT;
           setUserLocation(fallback);
-          updateUserMarker(fallback);
+          // No visual user marker on map (clean experience)
           const map = mapRef.current;
           if (map)
             map.flyTo({ center: [fallback.lng, fallback.lat], zoom: DEFAULT_ZOOM, duration: 400 });
@@ -615,7 +590,7 @@ export function MapView({
       flyToLocation,
       updateDestMarker,
       updateRoutePreview,
-      updateUserMarker,
+      // updateUserMarker removed (clean map, no origin marker rendered)
       userLocation,
       pickupCoords,
       fitRouteInView,
@@ -936,7 +911,7 @@ export function MapView({
                 )}
                 {!destCoords && (
                   <div className="text-[11px] text-[#6C6C6E] mt-0.5">
-                    绿色圆点 = 你的起点（固定） • 地图点击 = 选择终点
+                    点击地图选择目的地
                   </div>
                 )}
               </div>
