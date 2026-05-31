@@ -1,32 +1,6 @@
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAppStore } from '../stores/useAppStore';
-
-function TabBar() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  // Simplified tab bar for profile
-  const tabs = [
-    { path: '/home', label: 'Home' },
-    { path: '/destination', label: 'Explore' },
-    { path: '/favorites', label: 'Favorites' },
-    { path: '/activity', label: 'Activity' },
-    { path: '/profile', label: 'Profile' },
-  ];
-  return (
-    <div className="tab-bar absolute bottom-0 left-0 right-0 h-14 flex items-center justify-around z-50 border-t border-[#E5E5EA] bg-white">
-      {tabs.map((tab) => (
-        <button
-          key={tab.path}
-          onClick={() => navigate(tab.path)}
-          className={`text-xs px-3 py-1 ${location.pathname.startsWith(tab.path) ? 'text-[#0A7CFF] font-medium' : 'text-[#8E8E93]'}`}
-        >
-          {tab.label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 export function ProfileScreen() {
   const navigate = useNavigate();
@@ -94,7 +68,6 @@ export function ProfileScreen() {
         </button>
       </div>
 
-      <TabBar />
     </div>
   );
 }

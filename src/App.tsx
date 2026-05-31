@@ -225,11 +225,58 @@ export default function App() {
           }
         />
 
-        {/* Placeholder routes for remaining flows (implemented in later phases) */}
-        <Route path="/favorites" element={<FavoritesScreen />} />
+        {/* Main tab screens - with bottom navigation */}
+        <Route
+          path="/favorites"
+          element={
+            <motion.div
+              key="favorites"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+              className="screen bg-[#F8F9FA]"
+            >
+              <FavoritesScreen />
+              <MainTabBar />
+            </motion.div>
+          }
+        />
         <Route path="/add-place" element={<AddPlaceScreen />} />
-        <Route path="/activity" element={<ActivityScreen />} />
-        <Route path="/profile" element={<ProfileScreen />} />
+
+        <Route
+          path="/activity"
+          element={
+            <motion.div
+              key="activity"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+              className="screen bg-[#F8F9FA]"
+            >
+              <ActivityScreen />
+              <MainTabBar />
+            </motion.div>
+          }
+        />
+
+        <Route
+          path="/profile"
+          element={
+            <motion.div
+              key="profile"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+              className="screen bg-[#F8F9FA]"
+            >
+              <ProfileScreen />
+              <MainTabBar />
+            </motion.div>
+          }
+        />
 
         {/* Fallback */}
         <Route path="*" element={<SplashScreen />} />
