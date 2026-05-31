@@ -67,7 +67,7 @@ export function DestinationScreen() {
       {/* Subtle pickup reminder bar (visible above tab bar when map is shown) */}
       <div className="absolute bottom-[58px] left-0 right-0 z-[45] px-3 pointer-events-none">
         <div className="pointer-events-auto mx-auto max-w-[320px] text-[10px] bg-white/90 backdrop-blur border border-[#E5E5EA] rounded-full px-3 py-1 text-center text-[#6C6C6E] shadow-sm">
-          Pickup: <span className="font-medium text-black">{booking.pickupLocation}</span> •{' '}
+          起点: <span className="font-medium text-black">{booking.pickupLocation || '我的位置'}</span> •{' '}
           {booking.pickupTime}
         </div>
       </div>

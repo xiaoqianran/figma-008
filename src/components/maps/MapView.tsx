@@ -28,7 +28,8 @@ import {
  * - Bottom floating confirm panel with Figma-matched aesthetics (uses existing tokens)
  * - Touch friendly, 60fps pan/zoom via MapLibre
  * - Lazy-safe (parent should lazy-load), full cleanup on unmount
- * - Custom SVG markers (flag pin for dest, pulsing dot for user)
+ * - Custom SVG markers (flag pin for dest + "终点" label, pulsing green dot + "起点" badge for user/pickup)
+ * - Pickup (起点) is fixed origin (from Home "Where to?" or booking); dest (终点) chosen on map with immediate connecting line
  * - Small legal attribution footer
  *
  * Tile source (free, no key):
@@ -74,30 +75,35 @@ function calculateEstimatedPrice(pickup: LatLng, dest: LatLng): number {
 }
 
 // Custom destination pin (matches Figma screen 11 aesthetic: dark flag + cyan accent)
+// Now with prominent "终点" label badge so distinction is instant: 起点 (green dot) → 终点 (pin)
 function createDestinationMarkerElement(): HTMLDivElement {
   const el = document.createElement('div');
-  el.className = 'cargo-dest-pin';
+  el.className = 'cargo-dest-wrapper';
   el.innerHTML = `
-    <svg width="38" height="46" viewBox="0 0 38 46" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <g filter="url(#shadow)">
-        <path d="M19 0C8.5 0 0 8.5 0 19C0 29.5 19 46 19 46C19 46 38 29.5 38 19C38 8.5 29.5 0 19 0Z" fill="#111111"/>
-        <circle cx="19" cy="18" r="7" fill="#0A7CFF"/>
-        <path d="M15 14 L23 14 L23 22 L19 26 L15 22 Z" fill="white"/>
-        <circle cx="19" cy="18" r="2.5" fill="#111111"/>
-      </g>
-      <defs>
-        <filter id="shadow" x="-2" y="-2" width="42" height="52" filterUnits="userSpaceOnUse">
-          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.35"/>
-        </filter>
-      </defs>
-    </svg>
+    <div class="cargo-dest-label">终点</div>
+    <div class="cargo-dest-pin">
+      <svg width="38" height="46" viewBox="0 0 38 46" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <g filter="url(#shadow)">
+          <path d="M19 0C8.5 0 0 8.5 0 19C0 29.5 19 46 19 46C19 46 38 29.5 38 19C38 8.5 29.5 0 19 0Z" fill="#111111"/>
+          <circle cx="19" cy="18" r="7" fill="#0A7CFF"/>
+          <path d="M15 14 L23 14 L23 22 L19 26 L15 22 Z" fill="white"/>
+          <circle cx="19" cy="18" r="2.5" fill="#111111"/>
+        </g>
+        <defs>
+          <filter id="shadow" x="-2" y="-2" width="42" height="52" filterUnits="userSpaceOnUse">
+            <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.35"/>
+          </filter>
+        </defs>
+      </svg>
+    </div>
   `;
   el.style.cursor = 'grab';
   el.style.filter = 'drop-shadow(0 3px 6px rgba(0,0,0,0.3))';
   return el;
 }
 
-// Pulsing user location marker (iOS-like blue dot + halo) with clear "起点" label
+// Pulsing user location marker (iOS-like green dot + halo) — now prominently labeled "起点"
+// Start (pickup) is ALWAYS the fixed origin: user's current / booking location.
 function createUserLocationElement(): HTMLDivElement {
   const el = document.createElement('div');
   el.className = 'cargo-user-loc';
@@ -176,7 +182,11 @@ export function MapView({
           const pos = marker.getLngLat();
           const newCoords: LatLng = { lat: pos.lat, lng: pos.lng };
           debouncedReverse(newCoords);
-          // Keep camera following a little for premium feel
+          // Immediately refresh the 起点→终点 line so connection stays clear while dragging
+          if (pickupCoords) {
+            updateRoutePreview(pickupCoords, newCoords);
+          }
+          // Keep camera following a little for premium feel (no full refit during drag)
           map.panTo([newCoords.lng, newCoords.lat], { duration: 180 });
         });
 
@@ -234,11 +244,35 @@ export function MapView({
       },
       paint: {
         'line-color': '#0A7CFF',
-        'line-width': 3.5,
-        'line-opacity': 0.75,
-        'line-dasharray': [1.5, 1.8],
+        'line-width': 4.5,
+        'line-opacity': 0.9,
+        'line-dasharray': [0, 0], // solid for maximum clarity of 起点→终点 connection
       },
     });
+  }, []);
+
+  // Fit map view to show BOTH 起点 (pickup) and 终点 (dest) + the connecting line clearly.
+  // Called on explicit destination selection (tap, search, quick place) so the origin→destination relationship is instantly obvious.
+  // Does not fight free panning after the fact.
+  const fitRouteInView = useCallback((pickup: LatLng, dest: LatLng) => {
+    const map = mapRef.current;
+    if (!map) return;
+    try {
+      const bounds = new maplibregl.LngLatBounds(
+        [Math.min(pickup.lng, dest.lng) - 0.001, Math.min(pickup.lat, dest.lat) - 0.001] as [number, number],
+        [Math.max(pickup.lng, dest.lng) + 0.001, Math.max(pickup.lat, dest.lat) + 0.001] as [number, number]
+      );
+      map.fitBounds(bounds, {
+        padding: { top: 140, bottom: 260, left: 60, right: 60 }, // generous so labels + panel + search bar don't obscure
+        duration: 620,
+        maxZoom: 15.5,
+      });
+    } catch (_) {
+      // graceful: fall back to simple fly centering the midpoint
+      const midLat = (pickup.lat + dest.lat) / 2;
+      const midLng = (pickup.lng + dest.lng) / 2;
+      map.flyTo({ center: [midLng, midLat], zoom: 13.5, duration: 520 });
+    }
   }, []);
 
   // Place / update user location marker (non-draggable, pulsing)
@@ -278,14 +312,15 @@ export function MapView({
         // Small delay so fly feels natural before marker snaps
         setTimeout(() => {
           updateDestMarker(coords, label);
-          // Also draw route if we have pickup
+          // Immediately draw clear 起点→终点 line + fit view to show the full connection
           if (pickupCoords) {
             updateRoutePreview(pickupCoords, coords);
+            fitRouteInView(pickupCoords, coords);
           }
         }, 120);
       }
     },
-    [updateDestMarker, updateRoutePreview, pickupCoords]
+    [updateDestMarker, updateRoutePreview, pickupCoords, fitRouteInView]
   );
 
   // Core map initialization (once)
@@ -321,27 +356,33 @@ export function MapView({
           if (cancelled) return;
           setIsMapLoaded(true);
 
-          // Always show clear pickup / user location marker first (起点)
+          // Always show clear pickup / user location marker first — prominently labeled "起点" (green)
+          // This is the FIXED origin when coming from Home "Where to?". Always visible + labeled from t=0.
           updateUserMarker(pickupCoords || userLocation);
 
           // Do NOT auto-place a destination marker on load.
           // Let the user explicitly choose the destination (终点) by tapping or searching.
-          // This makes the UX much clearer: "I am here → I choose where to go".
+          // On first choice: distinct "终点" pin appears + solid blue line instantly connects 起点→终点 + view fits both.
+          // This makes the UX instantly communicate: "起点 = 我 (green) → 终点 = 我选的 (pin)".
 
-          // If we already have a previous destination (coming back in flow), restore it + draw route
+          // If we already have a previous destination (coming back in flow), restore it + draw route + fit to show clear 起点→终点
           if (initialDestCoords) {
             updateDestMarker(initialDestCoords);
             if (pickupCoords) {
               updateRoutePreview(pickupCoords, initialDestCoords);
+              fitRouteInView(pickupCoords, initialDestCoords);
             }
           }
 
-          // Tap anywhere on map → place destination pin + reverse geocode + draw route from pickup
+          // Tap anywhere on map → place distinct 终点 marker + immediately draw clear line from 起点 + fit view
           map.on('click', (e) => {
             const coords: LatLng = { lat: e.lngLat.lat, lng: e.lngLat.lng };
             updateDestMarker(coords);
             debouncedReverse(coords);
             updateRoutePreview(pickupCoords, coords);
+            if (pickupCoords) {
+              fitRouteInView(pickupCoords, coords);
+            }
           });
 
           // Keyboard accessibility (Escape clears suggestions)
@@ -448,7 +489,10 @@ export function MapView({
           if (!centerOnly) {
             // For destination picker flow, center + offer as potential dest too
             updateDestMarker(coords, addr || 'Your current location');
-            if (pickupCoords) updateRoutePreview(pickupCoords, coords);
+            if (pickupCoords) {
+              updateRoutePreview(pickupCoords, coords);
+              fitRouteInView(pickupCoords, coords);
+            }
           }
 
           // Also expose to parent via side effect on store (caller decides)
@@ -465,6 +509,10 @@ export function MapView({
             map.flyTo({ center: [fallback.lng, fallback.lat], zoom: DEFAULT_ZOOM, duration: 400 });
           if (!centerOnly) {
             updateDestMarker(fallback, 'San Francisco, CA (demo)');
+            if (pickupCoords) {
+              updateRoutePreview(pickupCoords, fallback);
+              fitRouteInView(pickupCoords, fallback);
+            }
           }
         },
         { enableHighAccuracy: true, timeout: 8500, maximumAge: 60_000 }
@@ -477,6 +525,7 @@ export function MapView({
       updateUserMarker,
       userLocation,
       pickupCoords,
+      fitRouteInView,
     ]
   );
 
@@ -519,8 +568,9 @@ export function MapView({
     setSuggestions([]);
 
     await flyToLocation(s.coords, true, s.address);
-    // updateRoutePreview already called inside flyToLocation flow via closure
+    // flyTo already draws line + fits; ensure one more sync in case
     updateRoutePreview(pickupCoords, s.coords);
+    fitRouteInView(pickupCoords, s.coords);
   };
 
   const clearSearch = () => {
@@ -535,6 +585,7 @@ export function MapView({
     const coords = userLocation;
     flyToLocation(coords, true, 'Your current location');
     updateRoutePreview(pickupCoords, coords);
+    fitRouteInView(pickupCoords, coords);
     setShowSuggestions(false);
   };
 
@@ -562,6 +613,7 @@ export function MapView({
   const handleQuickPlace = (coords: LatLng, label: string) => {
     flyToLocation(coords, true, label);
     updateRoutePreview(pickupCoords, coords);
+    fitRouteInView(pickupCoords, coords);
     setShowSuggestions(false);
   };
 
@@ -639,10 +691,10 @@ export function MapView({
             </button>
           </div>
 
-          {/* Pickup indicator (subtle, always visible) */}
+          {/* Pickup indicator (subtle, always visible) — reinforces 起点 = fixed origin */}
           <div className="mt-1.5 pl-1 text-[10px] uppercase tracking-[0.5px] text-[#8E8E93] flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#34C759]" /> PICKUP:{' '}
-            {booking.pickupLocation}
+            <div className="w-1.5 h-1.5 rounded-full bg-[#34C759]" /> 起点:{' '}
+            {booking.pickupLocation || '我的位置'}
           </div>
         </div>
       </div>
@@ -719,80 +771,78 @@ export function MapView({
       </button>
 
       {/* Bottom floating confirm panel – matches Figma card / button aesthetics */}
+      {/* ALWAYS shows 起点 (fixed origin = 我的位置 / booking pickup) and 终点 (user-chosen on map) */}
+      {/* This makes the origin/destination relationship crystal clear the instant the Explore map loads */}
       <div className="absolute bottom-0 left-0 right-0 z-50 px-4 pb-5 pt-3 bg-gradient-to-t from-white via-white to-white/95 border-t border-[#E5E5EA]">
-        {selectedDest ? (
-          <div className="space-y-3">
-            {/* Mini summary card - clearly show 起点 → 终点 */}
-            <div className="bg-white rounded-2xl border border-[#E5E5EA] p-3 shadow-sm text-sm">
-              {/* Origin */}
-              <div className="flex gap-3">
-                <div className="flex-shrink-0 pt-0.5">
-                  <div className="w-6 h-6 rounded bg-[#34C759]/10 flex items-center justify-center">
-                    <div className="w-2.5 h-2.5 bg-[#34C759] rounded-full" />
-                  </div>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[10px] uppercase tracking-[1px] text-[#8E8E93]">起点</div>
-                  <div className="font-medium text-[14px] leading-snug">
-                    {booking.pickupLocation || '我的位置'}
-                  </div>
+        <div className="space-y-3">
+          {/* Mini summary card - ALWAYS visible: 起点 → 终点 (even before any selection) */}
+          <div className="bg-white rounded-2xl border border-[#E5E5EA] p-3 shadow-sm text-sm">
+            {/* Origin (起点) - always the fixed pickup / my current location */}
+            <div className="flex gap-3">
+              <div className="flex-shrink-0 pt-0.5">
+                <div className="w-6 h-6 rounded bg-[#34C759]/10 flex items-center justify-center">
+                  <div className="w-2.5 h-2.5 bg-[#34C759] rounded-full" />
                 </div>
               </div>
-
-              {/* Connector line */}
-              <div className="ml-3 my-1 h-3 border-l border-dashed border-[#E5E5EA]" />
-
-              {/* Destination */}
-              <div className="flex gap-3">
-                <div className="flex-shrink-0 pt-0.5">
-                  <div className="w-6 h-6 rounded bg-[#0A7CFF]/10 flex items-center justify-center">
-                    <MapPin size={15} className="text-[#0A7CFF]" />
-                  </div>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[10px] uppercase tracking-[1px] text-[#8E8E93]">终点</div>
-                  <div className="font-semibold text-[15px] leading-snug text-balance">
-                    {selectedDest.address}
-                  </div>
-                  {pickupCoords && selectedDest && (
-                    <div className="text-[11px] text-[#6C6C6E] mt-0.5 tabular-nums">
-                      约 {haversineMiles(pickupCoords, selectedDest.coords).toFixed(1)} 英里
-                    </div>
-                  )}
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] uppercase tracking-[1px] text-[#8E8E93]">起点</div>
+                <div className="font-medium text-[14px] leading-snug">
+                  {booking.pickupLocation || '我的位置'}
                 </div>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleConfirm}
-              disabled={!selectedDest || isConfirming}
-              data-testid="set-destination-btn"
-              className="btn btn-primary w-full h-[54px] text-[17px] font-semibold tracking-[-0.2px] shadow-md active:scale-[0.985] disabled:opacity-60 transition-all"
-            >
-              {isConfirming ? 'Setting destination…' : 'Set destination'}
-            </button>
+            {/* Connector line (visual start → end) */}
+            <div className="ml-3 my-1 h-3 border-l border-dashed border-[#E5E5EA]" />
 
-            <div className="text-center text-[10px] text-[#8E8E93] -mt-1">
-              Price estimate shown on next screen • Drag pin or tap map to adjust
+            {/* Destination (终点) - prominent, updates live on tap/search/drag */}
+            <div className="flex gap-3">
+              <div className="flex-shrink-0 pt-0.5">
+                <div className="w-6 h-6 rounded bg-[#0A7CFF]/10 flex items-center justify-center">
+                  <MapPin size={15} className="text-[#0A7CFF]" />
+                </div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] uppercase tracking-[1px] text-[#8E8E93]">终点</div>
+                <div className="font-semibold text-[15px] leading-snug text-balance">
+                  {selectedDest ? selectedDest.address : '请在地图上点击或搜索选择'}
+                </div>
+                {pickupCoords && selectedDest && (
+                  <div className="text-[11px] text-[#6C6C6E] mt-0.5 tabular-nums">
+                    约 {haversineMiles(pickupCoords, selectedDest.coords).toFixed(1)} 英里
+                  </div>
+                )}
+                {!selectedDest && (
+                  <div className="text-[11px] text-[#6C6C6E] mt-0.5">
+                    绿色圆点 = 你的起点（固定） • 地图点击 = 选择终点
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        ) : (
-          <div className="text-center py-2">
-            <div className="text-sm font-medium text-[#111]">
-              地图上点击选择终点
-            </div>
-            <div className="text-[11px] text-[#6C6C6E] mt-0.5">
-              蓝色圆点为你的起点（我的位置）
-            </div>
-            <button
-              onClick={handleUseCurrentAsDest}
-              className="mt-2.5 text-xs font-semibold text-[#0A7CFF] active:underline"
-            >
-              Or use my current location as destination
-            </button>
+
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={!selectedDest || isConfirming}
+            data-testid="set-destination-btn"
+            className="btn btn-primary w-full h-[54px] text-[17px] font-semibold tracking-[-0.2px] shadow-md active:scale-[0.985] disabled:opacity-60 transition-all"
+          >
+            {isConfirming ? 'Setting destination…' : 'Set destination'}
+          </button>
+
+          <div className="text-center text-[10px] text-[#8E8E93] -mt-1 flex items-center justify-center gap-3">
+            <span>Price estimate shown on next screen • Drag pin or tap map to adjust</span>
+            {!selectedDest && (
+              <button
+                onClick={handleUseCurrentAsDest}
+                className="text-[#0A7CFF] active:underline font-medium"
+              >
+                用当前位置作终点
+              </button>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Legal attribution – required by MapLibre / OSM terms */}
         <div className="text-center mt-2 text-[9px] text-[#8E8E93]/70 tracking-[0.3px]">
@@ -802,18 +852,56 @@ export function MapView({
 
       {/* Extra tiny style overrides for markers + clean mobile map (scoped) */}
       <style>{`
+        .cargo-dest-wrapper { position: relative; display: flex; flex-direction: column; align-items: center; pointer-events: auto; }
         .cargo-dest-pin { pointer-events: auto; }
+        .cargo-dest-label {
+          position: absolute;
+          top: -18px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #0A7CFF;
+          color: #fff;
+          font-size: 9px;
+          font-weight: 700;
+          letter-spacing: 0.6px;
+          padding: 1px 6px;
+          border-radius: 4px;
+          white-space: nowrap;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+          pointer-events: none;
+          line-height: 1.1;
+          border: 1px solid rgba(255,255,255,0.9);
+          z-index: 1;
+        }
         .cargo-user-loc { position: relative; width: 22px; height: 22px; }
         .cargo-user-dot-outer {
           position: absolute; inset: 0;
-          background: rgba(10,124,255,0.22);
+          background: rgba(52,199,89,0.25);
           border-radius: 9999px;
           animation: cargo-pulse 2.1s cubic-bezier(0.23,1,0.32,1) infinite;
         }
         .cargo-user-dot {
           position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-          width: 11px; height: 11px; background: #0A7CFF;
-          border: 2.5px solid white; border-radius: 9999px; box-shadow: 0 0 0 1px rgba(10,124,255,0.4);
+          width: 12px; height: 12px; background: #34C759;
+          border: 2.5px solid white; border-radius: 9999px; box-shadow: 0 0 0 1px rgba(52,199,89,0.45);
+        }
+        .cargo-user-label {
+          position: absolute;
+          top: -20px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #34C759;
+          color: #fff;
+          font-size: 9px;
+          font-weight: 700;
+          letter-spacing: 0.6px;
+          padding: 1px 6px;
+          border-radius: 4px;
+          white-space: nowrap;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+          pointer-events: none;
+          line-height: 1.1;
+          border: 1px solid rgba(255,255,255,0.9);
         }
         @keyframes cargo-pulse {
           0%,100% { transform: scale(1); opacity: 0.65; }
@@ -828,3 +916,4 @@ export function MapView({
 }
 
 export default MapView;
+
