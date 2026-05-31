@@ -320,22 +320,22 @@ export function MapView({
           if (cancelled) return;
           setIsMapLoaded(true);
 
-          // Seed initial destination marker
-          const startDest = initialDestCoords || {
-            lat: userLocation.lat + 0.018,
-            lng: userLocation.lng + 0.012,
-          };
-          updateDestMarker(startDest);
+          // Always show clear pickup / user location marker first (起点)
+          updateUserMarker(pickupCoords || userLocation);
 
-          // Seed user marker
-          updateUserMarker(userLocation);
+          // Do NOT auto-place a destination marker on load.
+          // Let the user explicitly choose the destination (终点) by tapping or searching.
+          // This makes the UX much clearer: "I am here → I choose where to go".
 
-          // If we have both pickup + initial dest, draw route immediately
-          if (pickupCoords && startDest) {
-            updateRoutePreview(pickupCoords, startDest);
+          // If we already have a previous destination (coming back in flow), restore it + draw route
+          if (initialDestCoords) {
+            updateDestMarker(initialDestCoords);
+            if (pickupCoords) {
+              updateRoutePreview(pickupCoords, initialDestCoords);
+            }
           }
 
-          // Tap anywhere on map → move destination pin there + reverse geocode
+          // Tap anywhere on map → place destination pin + reverse geocode + draw route from pickup
           map.on('click', (e) => {
             const coords: LatLng = { lat: e.lngLat.lat, lng: e.lngLat.lng };
             updateDestMarker(coords);
@@ -721,24 +721,41 @@ export function MapView({
       <div className="absolute bottom-0 left-0 right-0 z-50 px-4 pb-5 pt-3 bg-gradient-to-t from-white via-white to-white/95 border-t border-[#E5E5EA]">
         {selectedDest ? (
           <div className="space-y-3">
-            {/* Mini summary card */}
-            <div className="bg-white rounded-2xl border border-[#E5E5EA] p-3 shadow-sm">
-              <div className="flex gap-3 text-sm">
+            {/* Mini summary card - clearly show 起点 → 终点 */}
+            <div className="bg-white rounded-2xl border border-[#E5E5EA] p-3 shadow-sm text-sm">
+              {/* Origin */}
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 pt-0.5">
+                  <div className="w-6 h-6 rounded bg-[#34C759]/10 flex items-center justify-center">
+                    <div className="w-2.5 h-2.5 bg-[#34C759] rounded-full" />
+                  </div>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] uppercase tracking-[1px] text-[#8E8E93]">起点</div>
+                  <div className="font-medium text-[14px] leading-snug">
+                    {booking.pickupLocation || '我的位置'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Connector line */}
+              <div className="ml-3 my-1 h-3 border-l border-dashed border-[#E5E5EA]" />
+
+              {/* Destination */}
+              <div className="flex gap-3">
                 <div className="flex-shrink-0 pt-0.5">
                   <div className="w-6 h-6 rounded bg-[#0A7CFF]/10 flex items-center justify-center">
                     <MapPin size={15} className="text-[#0A7CFF]" />
                   </div>
                 </div>
-                <div className="min-w-0 flex-1 leading-tight">
-                  <div className="text-[10px] uppercase tracking-[1px] text-[#8E8E93]">
-                    DESTINATION
-                  </div>
-                  <div className="font-semibold text-[15px] mt-px leading-snug text-balance">
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] uppercase tracking-[1px] text-[#8E8E93]">终点</div>
+                  <div className="font-semibold text-[15px] leading-snug text-balance">
                     {selectedDest.address}
                   </div>
                   {pickupCoords && selectedDest && (
-                    <div className="text-[11px] text-[#6C6C6E] mt-1 tabular-nums">
-                      ~{haversineMiles(pickupCoords, selectedDest.coords).toFixed(1)} mi away
+                    <div className="text-[11px] text-[#6C6C6E] mt-0.5 tabular-nums">
+                      约 {haversineMiles(pickupCoords, selectedDest.coords).toFixed(1)} 英里
                     </div>
                   )}
                 </div>
@@ -762,7 +779,10 @@ export function MapView({
         ) : (
           <div className="text-center py-2">
             <div className="text-sm font-medium text-[#111]">
-              Tap the map or search to choose destination
+              地图上点击选择终点
+            </div>
+            <div className="text-[11px] text-[#6C6C6E] mt-0.5">
+              蓝色圆点为你的起点（我的位置）
             </div>
             <button
               onClick={handleUseCurrentAsDest}
